@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nothi</title>
+<meta name="description" content="A Bangla-first PDF editor: add Bangla and English text in a real embedded Unicode font that never breaks or turns into boxes on export.">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><symbol id="i-cursor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></symbol>
+<symbol id="i-type" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></symbol>
+<symbol id="i-file-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M12 18v-6"/><path d="M9 15h6"/></symbol>
+<symbol id="i-tools" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+<symbol id="i-chev-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+<symbol id="i-chev-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-move" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><path d="M8 12h8"/></symbol>
+<symbol id="i-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="m14 10 7-7"/><path d="m3 21 7-7"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></symbol>
+<symbol id="i-signature" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16c2.5 0 2.5-9 5-9s2.5 9 5 9 2.5-5.5 5-5.5"/><path d="M3 21h18"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L9 18"/></symbol>
+<symbol id="i-pages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="14" height="16" rx="2"/><path d="M3 7v12a2 2 0 0 0 2 2h10"/></symbol>
+<symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"/></symbol>
+<symbol id="i-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-opacity=".22"/><path d="M21 12a9 9 0 0 0-9-9"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></symbol>
+</defs></svg>
+<div class="app">
+  <div class="topbar">
+    <button class="brand" id="btnHome" type="button" title="হোম পেজে ফিরুন">
+      <span class="brand-mark"><svg class="ic" aria-hidden="true"><use href="#i-pages"/></svg></span>
+      <span class="brand-name">Nothi</span>
+    </button>
+
+    <div class="v-sep"></div>
+
+    <div class="tool-group" id="toolGroup">
+      <button class="tool-btn" id="toolSelect" type="button" title="নির্বাচন করুন">
+        <svg class="ic" aria-hidden="true"><use href="#i-cursor"/></svg><span>নির্বাচন</span>
+      </button>
+      <button class="tool-btn active" id="toolText" type="button" title="টেক্সট বসান">
+        <svg class="ic" aria-hidden="true"><use href="#i-type"/></svg><span>টেক্সট</span>
+      </button>
+    </div>
+
+    <div class="v-sep"></div>
+
+    <button class="ghost-btn" id="btnUpload" type="button">
+      <svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span id="uploadLabel">PDF আপলোড</span>
+    </button>
+    <input type="file" id="fileInput" class="file-input-hidden" accept="application/pdf">
+
+    <div class="v-sep"></div>
+
+    <button class="ghost-btn" id="btnToolsHub" type="button" title="সব টুলস">
+      <svg class="ic" aria-hidden="true"><use href="#i-tools"/></svg><span>সব টুলস</span>
+    </button>
+
+    <div class="v-sep"></div>
+
+    <div class="status-bar" id="statusBar">
+      <button class="sb-btn" id="btnZoomOut" type="button" aria-label="জুম আউট"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
+      <span class="sb-zoom mono" id="zoomLabel">100%</span>
+      <button class="sb-btn" id="btnZoomIn" type="button" aria-label="জুম ইন"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+      <div class="sb-sep"></div>
+      <button class="sb-btn" id="btnPrev" type="button" aria-label="আগের পাতা"><svg class="ic" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <span class="sb-page mono"><span id="pageNum">1</span> / <span id="pageCount">1</span></span>
+      <button class="sb-btn" id="btnNext" type="button" aria-label="পরের পাতা"><svg class="ic" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <button class="theme-toggle" id="btnThemeToggle" type="button" title="থিম পরিবর্তন করুন (হালকা/গাঢ়)" aria-label="থিম পরিবর্তন করুন"><svg class="ic theme-ic" aria-hidden="true"><use href="#i-moon"/></svg></button>
+    <button class="primary-btn" id="btnDownload" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>ডাউনলোড</span></button>
+  </div>
+
+  <div class="body-row">
+    <div class="sidebar" id="sidebar"></div>
+
+    <div class="stage-wrap" id="stageWrap">
+      <div class="loading-overlay" id="loadingOverlay">
+        <svg class="loading-spinner" aria-hidden="true"><use href="#i-spinner"/></svg>
+        <span class="loading-text" id="loadingText">PDF লোড হচ্ছে...</span>
+      </div>
+      <div class="landing" id="emptyState">
+        <div class="hero-blob hero-blob-1" aria-hidden="true"></div>
+        <div class="hero-blob hero-blob-2" aria-hidden="true"></div>
+
+        <div class="landing-hero">
+          <div class="hero-copy">
+            <span class="hero-badge">বাংলাদেশের জন্য তৈরি · ১০০% ফ্রি</span>
+            <h1 class="hero-title">বাংলায় PDF এডিট করুন,<br><span class="hero-accent">চোখের পলকে</span></h1>
+            <p class="hero-sub">আসল ইউনিকোড ফন্টে বাংলা ও ইংরেজি টেক্সট বসান — এক্সপোর্টের পরও ভাঙবে না বা বক্স (□□□) হয়ে যাবে না।</p>
+
+            <div class="hero-upload-card">
+              <button class="primary-btn hero-cta" id="btnUpload2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>PDF বেছে নিন</span></button>
+              <p class="hero-drophint">অথবা এখানে PDF ফাইল টেনে এনে ছেড়ে দিন</p>
+            </div>
+
+            <div class="hero-trust">
+              <span><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>কোনো সাইনআপ লাগবে না</span>
+              <span><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>কিছুই আপলোড হয় না</span>
+              <span><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>একদম ফ্রি</span>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="hero-mockup">
+              <div class="hero-mockup-bar">
+                <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+              </div>
+              <img class="hero-mockup-img" src="assets/img/hero-preview.png" alt="Nothi-এ বাংলা চাকরির আবেদনপত্র এডিট করা হচ্ছে" width="1385" height="1478">
+            </div>
+          </div>
+        </div>
+
+        <div class="landing-stats">
+          <div class="stat"><div class="stat-num">৳০</div><div class="stat-label">খরচ, চিরকাল</div></div>
+          <div class="stat"><div class="stat-num">০%</div><div class="stat-label">ফাইল সার্ভারে আপলোড হয়</div></div>
+          <div class="stat"><div class="stat-num">৩০০×৩০০</div><div class="stat-label">Teletalk ছবির নিখুঁত মাপ</div></div>
+          <div class="stat"><div class="stat-num">২</div><div class="stat-label">থিম — লাইট ও ডার্ক</div></div>
+        </div>
+
+        <div class="landing-section-head">
+          <span class="landing-eyebrow">দেখে নিন</span>
+          <h2 class="landing-section-title">কাজ করে যেভাবে</h2>
+        </div>
+        <div class="showcase">
+          <div class="showcase-tabs" role="tablist">
+            <button class="showcase-tab active" type="button"
+                    data-img="assets/img/showcase-photo.png"
+                    data-desc="পাসপোর্ট ছবি ও স্বাক্ষর সঠিক সাইজে (৩০০×৩০০ / ৩০০×৮০) ক্রপ করে JPG বানান।">
+              <svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg><span>ছবি ও স্বাক্ষর</span>
+            </button>
+            <button class="showcase-tab" type="button"
+                    data-img="assets/img/showcase-pages.png"
+                    data-desc="পাতা মুছুন, ঘোরান, টেনে সাজান — বা নির্দিষ্ট পাতা আলাদা করে বের করে নিন।">
+              <svg class="ic" aria-hidden="true"><use href="#i-pages"/></svg><span>পাতা ম্যানেজার</span>
+            </button>
+            <button class="showcase-tab" type="button"
+                    data-img="assets/img/hero-preview.png"
+                    data-desc="বাংলা/ইংরেজি টেক্সট বসান, ফন্ট-সাইজ-রং বদলান — আসল ইউনিকোড ফন্টে এক্সপোর্ট হবে।">
+              <svg class="ic" aria-hidden="true"><use href="#i-type"/></svg><span>টেক্সট এডিট</span>
+            </button>
+          </div>
+          <p class="showcase-desc" id="showcaseDesc">পাসপোর্ট ছবি ও স্বাক্ষর সঠিক সাইজে (৩০০×৩০০ / ৩০০×৮০) ক্রপ করে JPG বানান।</p>
+          <div class="showcase-frame">
+            <div class="hero-mockup-bar">
+              <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+            </div>
+            <img id="showcaseImg" class="showcase-img" src="assets/img/showcase-photo.png" alt="Nothi-এর একটি ফিচার দেখানো হচ্ছে">
+          </div>
+        </div>
+
+        <div class="landing-section-head">
+          <span class="landing-eyebrow">কীভাবে কাজ করে</span>
+          <h2 class="landing-section-title">মাত্র ৩ ধাপে সম্পন্ন</h2>
+        </div>
+        <div class="landing-steps">
+          <div class="step">
+            <div class="step-num">১</div>
+            <div class="step-title">PDF আপলোড করুন</div>
+            <div class="step-desc">কম্পিউটার থেকে বেছে নিন, অথবা টেনে এনে ছেড়ে দিন।</div>
+            <svg class="ic step-arrow" aria-hidden="true"><use href="#i-chev-right"/></svg>
+          </div>
+          <div class="step">
+            <div class="step-num">২</div>
+            <div class="step-title">লিখুন বা বসান</div>
+            <div class="step-desc">বাংলা/ইংরেজি টেক্সট, ছবি, স্বাক্ষর — যা দরকার সব যোগ করুন।</div>
+            <svg class="ic step-arrow" aria-hidden="true"><use href="#i-chev-right"/></svg>
+          </div>
+          <div class="step">
+            <div class="step-num">৩</div>
+            <div class="step-title">ডাউনলোড করুন</div>
+            <div class="step-desc">আসল ফন্টে, নিখুঁতভাবে এক্সপোর্ট হবে — সাথে সাথে।</div>
+          </div>
+        </div>
+
+        <div class="landing-section-head">
+          <span class="landing-eyebrow">সুবিধাসমূহ</span>
+          <h2 class="landing-section-title">যা যা পাচ্ছেন</h2>
+        </div>
+        <div class="landing-features">
+          <div class="feature-card">
+            <div class="feature-ic"><svg class="ic" aria-hidden="true"><use href="#i-type"/></svg></div>
+            <div class="feature-title">আসল বাংলা ফন্ট</div>
+            <div class="feature-desc">Hind Siliguri, Kalpurush, Tinos — এক্সপোর্টের পরও ভাঙবে না।</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-ic"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg></div>
+            <div class="feature-title">১০০% প্রাইভেট</div>
+            <div class="feature-desc">কোনো ফাইল সার্ভারে যায় না — সব প্রসেসিং আপনার ব্রাউজারেই হয়।</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-ic"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></div>
+            <div class="feature-title">Teletalk-রেডি ছবি/স্বাক্ষর</div>
+            <div class="feature-desc">সরকারি ফর্মের সঠিক সাইজে (৩০০×৩০০ / ৩০০×৮০) ছবি বানান।</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-ic"><svg class="ic" aria-hidden="true"><use href="#i-tools"/></svg></div>
+            <div class="feature-title">সব টুলস এক জায়গায়</div>
+            <div class="feature-desc">Merge, Compress, ছবি→PDF, ওয়াটারমার্ক — সবই বিনামূল্যে।</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" id="stage" style="display:none;">
+        <canvas id="pdfCanvas"></canvas>
+        <div class="overlay mode-text" id="overlay">
+          <div class="align-guide align-guide-v" id="guideV"></div>
+          <div class="align-guide align-guide-h" id="guideH"></div>
+          <div class="floating-bar" id="floatingBar">
+            <div class="fb-btn fb-move" id="fbMove" title="টেনে সরান"><svg class="ic" aria-hidden="true"><use href="#i-move"/></svg></div>
+            <div class="fb-sep"></div>
+            <button class="fb-btn" id="fbFontDown" type="button" title="ছোট করুন"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
+            <input type="number" id="fbFontSize" class="fb-size mono" value="16" min="6" max="96">
+            <button class="fb-btn" id="fbFontUp" type="button" title="বড় করুন"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+            <div class="fb-sep"></div>
+            <select id="fbFont" class="fb-select" title="Font">
+              <option value="hind">Hind Siliguri</option>
+              <option value="kalpurush">Kalpurush</option>
+              <option value="tinos">Tinos (Times New Roman)</option>
+            </select>
+            <button class="fb-btn" id="fbAutoFont" type="button" title="Auto Font: বাংলা+English আলাদা ফন্টে বসবে (এক্সপোর্টে)">Aa</button>
+            <div class="fb-sep"></div>
+            <button class="fb-btn" id="fbBold" type="button" title="বোল্ড">B</button>
+            <label class="fb-color-swatch" title="রং"><input type="color" id="fbColor" value="#1a1a1a"></label>
+            <div class="fb-sep"></div>
+            <button class="fb-btn" id="fbDuplicate" type="button" title="কপি করুন"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>
+            <button class="fb-btn fb-danger" id="fbDelete" type="button" title="মুছুন"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" id="mergeModal" hidden>
+    <h2>PDF মার্জ করুন</h2>
+    <p class="modal-note">একাধিক PDF ফাইল যোগ করুন, ক্রম ঠিক করুন, তারপর একটাই ফাইলে মার্জ করে ডাউনলোড করুন।</p>
+    <button class="ghost-btn" id="mergeAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>ফাইল যোগ করুন</span></button>
+    <input type="file" id="mergeFileInput" class="file-input-hidden" accept="application/pdf" multiple>
+    <ul class="modal-file-list" id="mergeFileList"></ul>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="mergeCancelBtn" type="button">বাতিল</button>
+      <button class="primary-btn" id="mergeRunBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg><span>মার্জ করে ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+
+  <div class="modal" id="compressModal" hidden>
+    <h2>PDF কমপ্রেস করুন</h2>
+    <p class="modal-note">প্রতিটা পাতা ছবিতে রূপান্তর করে সংকুচিত করা হয় — এতে টেক্সট আর select/copy করা যাবে না, কিন্তু স্ক্যান করা বা ছবি-ভিত্তিক PDF-এর সাইজ অনেকটাই কমে যায়।</p>
+    <button class="ghost-btn" id="compressAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>PDF বেছে নিন</span></button>
+    <input type="file" id="compressFileInput" class="file-input-hidden" accept="application/pdf">
+    <div class="modal-file-list" id="compressFileName"></div>
+    <label class="modal-quality-row">
+      মান (quality): <input type="range" id="compressQuality" min="30" max="95" value="65">
+      <span class="mono" id="compressQualityLabel">65%</span>
+    </label>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="compressCancelBtn" type="button">বাতিল</button>
+      <button class="primary-btn" id="compressRunBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-compress"/></svg><span>কমপ্রেস করে ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+
+  <div class="modal modal-wide" id="toolsHubModal" hidden>
+    <h2>সব টুলস</h2>
+    <p class="modal-note">যেটা দরকার সেটা বেছে নিন।</p>
+    <div class="tool-grid">
+      <button class="tool-card" id="hubOpenMerge" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg></span>
+        <span class="tc-label">PDF মার্জ</span>
+        <span class="tc-sub">একাধিক PDF জোড়া দিয়ে একটা ফাইল বানান</span>
+      </button>
+      <button class="tool-card" id="hubOpenCompress" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-compress"/></svg></span>
+        <span class="tc-label">PDF কমপ্রেস</span>
+        <span class="tc-sub">ফাইলের সাইজ ছোট করুন</span>
+      </button>
+      <button class="tool-card" id="hubOpenPhoto" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></span>
+        <span class="tc-label">পাসপোর্ট ছবি / স্বাক্ষর সাইজ</span>
+        <span class="tc-sub">৩০০×৩০০ ছবি, ৩০০×৮০ স্বাক্ষর, সাদা/নীল ব্যাকগ্রাউন্ড, JPG</span>
+      </button>
+      <button class="tool-card" id="hubOpenSign" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-signature"/></svg></span>
+        <span class="tc-label">স্বাক্ষর আঁকুন</span>
+        <span class="tc-sub">মাউস/আঙুল দিয়ে সই এঁকে ডাউনলোড করুন</span>
+      </button>
+      <button class="tool-card" id="hubOpenImgToPdf" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></span>
+        <span class="tc-label">ছবি → PDF</span>
+        <span class="tc-sub">একাধিক ছবি জোড়া দিয়ে PDF (NID সামনে+পেছনে একসাথে)</span>
+      </button>
+      <button class="tool-card" id="hubOpenPageMgr" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-pages"/></svg></span>
+        <span class="tc-label">পাতা ম্যানেজার</span>
+        <span class="tc-sub">পাতা মুছুন, ঘুরান, সাজান, নির্দিষ্ট পাতা বের করুন</span>
+      </button>
+      <button class="tool-card" id="hubOpenStamp" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-droplet"/></svg></span>
+        <span class="tc-label">ওয়াটারমার্ক / পাতা নম্বর / তারিখ</span>
+        <span class="tc-sub">সব পাতায় একসাথে বসান</span>
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="hubCancelBtn" type="button">বন্ধ করুন</button>
+    </div>
+  </div>
+
+  <div class="modal modal-wide" id="photoStudioModal" hidden>
+    <h2>পাসপোর্ট ছবি / স্বাক্ষর সাইজ</h2>
+    <p class="modal-note">Teletalk-সহ সরকারি ফর্মের জন্য সঠিক সাইজে JPG বানান।</p>
+    <button class="ghost-btn" id="psAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span>ছবি বেছে নিন</span></button>
+    <input type="file" id="psFileInput" class="file-input-hidden" accept="image/*">
+    <div class="ps-body" id="psBody" hidden>
+      <div class="ps-canvas-wrap">
+        <canvas id="psCanvas"></canvas>
+      </div>
+      <div class="ps-controls">
+        <label class="ps-row">সাইজ
+          <select id="psPreset">
+            <option value="photo">পাসপোর্ট ছবি (৩০০×৩০০px)</option>
+            <option value="signature">স্বাক্ষর (৩০০×৮০px)</option>
+            <option value="custom">কাস্টম</option>
+          </select>
+        </label>
+        <div class="ps-row" id="psCustomRow" hidden>
+          <input type="number" id="psCustomW" min="20" max="4000" value="300"> ×
+          <input type="number" id="psCustomH" min="20" max="4000" value="300"> px
+        </div>
+        <label class="ps-row">জুম / পজিশন <input type="range" id="psZoom" min="100" max="300" value="100"></label>
+        <label class="ps-row">ব্যাকগ্রাউন্ড
+          <select id="psBg">
+            <option value="none">অপরিবর্তিত</option>
+            <option value="white">সাদা</option>
+            <option value="blue">নীল</option>
+          </select>
+        </label>
+        <label class="ps-row ps-check-row"><input type="checkbox" id="psRemoveBg"> আসল ব্যাকগ্রাউন্ড সরানোর চেষ্টা করুন (বেসিক)</label>
+        <label class="ps-row" id="psSensRow" hidden>সংবেদনশীলতা <input type="range" id="psSensitivity" min="10" max="90" value="35"></label>
+        <label class="ps-row">মান (quality) <input type="range" id="psQuality" min="50" max="95" value="90"> <span class="mono" id="psQualityLabel">90%</span></label>
+        <p class="modal-note" id="psRemoveNote" hidden>বেসিক রিমুভাল সবচেয়ে ভালো কাজ করে যখন আসল ব্যাকগ্রাউন্ড মোটামুটি একরঙা/সমান হয় (যেমন দেয়াল)। জটিল ব্যাকগ্রাউন্ডে পুরোপুরি নাও কাজ করতে পারে — না বুঝলে "সংবেদনশীলতা" কমিয়ে-বাড়িয়ে দেখুন।</p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="psCancelBtn" type="button">বাতিল</button>
+      <button class="primary-btn" id="psDownloadBtn" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>JPG ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+
+  <div class="modal" id="signPadModal" hidden>
+    <h2>স্বাক্ষর আঁকুন</h2>
+    <p class="modal-note">মাউস বা আঙুল দিয়ে নিচে সই করুন।</p>
+    <div class="sign-canvas-wrap">
+      <canvas id="signCanvas" width="600" height="160"></canvas>
+    </div>
+    <div class="modal-actions modal-actions-split">
+      <button class="ghost-btn" id="signClearBtn" type="button">মুছুন</button>
+      <div class="modal-actions-group">
+        <button class="ghost-btn" id="signCancelBtn" type="button">বন্ধ করুন</button>
+        <button class="primary-btn" id="signDownloadPngBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>PNG (স্বচ্ছ)</span></button>
+        <button class="primary-btn" id="signDownloadJpgBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>JPG (৩০০×৮০)</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="imgToPdfModal" hidden>
+    <h2>ছবি → PDF</h2>
+    <p class="modal-note">একাধিক ছবি জোড়া দিয়ে PDF বানান। NID সামনে+পেছনে এক পাতায় বসাতে "একই পাতায়" বেছে নিন।</p>
+    <button class="ghost-btn" id="i2pAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span>ছবি যোগ করুন</span></button>
+    <input type="file" id="i2pFileInput" class="file-input-hidden" accept="image/*" multiple>
+    <ul class="modal-file-list" id="i2pFileList"></ul>
+    <label class="ps-row"><input type="radio" name="i2pMode" value="separate" checked> প্রতিটি ছবি আলাদা পাতায়</label>
+    <label class="ps-row"><input type="radio" name="i2pMode" value="stack"> সব ছবি এক পাতায় (উপরে-নিচে, যেমন NID)</label>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="i2pCancelBtn" type="button">বাতিল</button>
+      <button class="primary-btn" id="i2pRunBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>PDF বানিয়ে ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+
+  <div class="modal modal-wide" id="pageMgrModal" hidden>
+    <h2>পাতা ম্যানেজার</h2>
+    <p class="modal-note">পাতা মুছুন, ঘুরান, টেনে সাজান — অথবা নিচে নির্দিষ্ট পাতা বের করে নিন (split)।</p>
+    <button class="ghost-btn" id="pmAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>PDF বেছে নিন</span></button>
+    <input type="file" id="pmFileInput" class="file-input-hidden" accept="application/pdf">
+    <div class="pm-grid" id="pmGrid"></div>
+    <div class="pm-split-row" id="pmSplitRow" hidden>
+      <label>নির্দিষ্ট পাতা বের করুন (যেমন 1-3): <input type="text" id="pmSplitRange" placeholder="1-3"></label>
+      <button class="ghost-btn" id="pmSplitBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-scissors"/></svg><span>বের করে ডাউনলোড করুন</span></button>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="pmCancelBtn" type="button">বাতিল</button>
+      <button class="primary-btn" id="pmApplyBtn" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>প্রয়োগ করে ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+
+  <div class="modal" id="stampModal" hidden>
+    <h2>ওয়াটারমার্ক / পাতা নম্বর / তারিখ</h2>
+    <button class="ghost-btn" id="stAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>PDF বেছে নিন</span></button>
+    <input type="file" id="stFileInput" class="file-input-hidden" accept="application/pdf">
+    <div class="modal-file-list" id="stFileName"></div>
+
+    <label class="ps-row"><input type="checkbox" id="stWmEnable"> ওয়াটারমার্ক যোগ করুন</label>
+    <div class="st-sub" id="stWmSub" hidden>
+      <input type="text" id="stWmText" placeholder="যেমন: COPY / খসড়া">
+      <label>স্বচ্ছতা <input type="range" id="stWmOpacity" min="5" max="60" value="20"></label>
+    </div>
+
+    <label class="ps-row"><input type="checkbox" id="stPnEnable"> পাতা নম্বর যোগ করুন</label>
+    <div class="st-sub" id="stPnSub" hidden>
+      <select id="stPnPos">
+        <option value="bottom-center">নিচে-মাঝে</option>
+        <option value="bottom-right">নিচে-ডানে</option>
+        <option value="bottom-left">নিচে-বামে</option>
+        <option value="top-right">উপরে-ডানে</option>
+      </select>
+    </div>
+
+    <label class="ps-row"><input type="checkbox" id="stDtEnable"> তারিখ যোগ করুন (আজকের তারিখ)</label>
+    <div class="st-sub" id="stDtSub" hidden>
+      <select id="stDtPos">
+        <option value="top-right">উপরে-ডানে</option>
+        <option value="top-left">উপরে-বামে</option>
+        <option value="bottom-right">নিচে-ডানে</option>
+        <option value="bottom-left">নিচে-বামে</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="ghost-btn" id="stCancelBtn" type="button">বাতিল</button>
+      <button class="primary-btn" id="stRunBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>প্রয়োগ করে ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/fonts-data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.14.1/runtime.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

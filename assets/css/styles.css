@@ -1,0 +1,669 @@
+
+
+  /* ---------------------------------------------------------------- design tokens: "ink & paper" --
+     a deliberate move away from the generic SaaS blue-on-cool-gray look, tying the palette back to
+     the Nothi (= official document/file) name itself -- warm paper tones in light mode, a rich indigo-violet
+     "ink" accent in both modes instead of a default-Bootstrap-blue. */
+  :root {
+    --bg: #f3efe3;
+    --panel: #fffdf7;
+    /* inset/"sunken" surfaces (toolbar pills, cards, inputs). Needs its own token: it used to be
+       --bg, but once --panel went warm-white the two sat ~4% apart in luminance and every pill
+       visually dissolved into the toolbar. */
+    --sunken: #ece5d5;
+    --border: #e6dcc6;
+    --text: #211d33;
+    --text-dim: #736b58;
+    --accent: #4338ca;
+    --accent-2: #7c3aed;
+    --accent-fg: #ffffff;
+    --accent-soft: #ece9fd;
+    --accent-soft-border: #c9c0f7;
+    --danger: #dc2626;
+    --danger-soft: #fdeceb;
+    --page-surface: #ffffff;
+    --shadow: rgba(41, 30, 15, 0.14);
+    --focus-ring: #4338ca;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131120;
+      --panel: #1c1930;
+      --sunken: #12101d;
+      --border: #322c4d;
+      --text: #eee9f8;
+      --text-dim: #a099ba;
+      --accent: #8b7bf5;
+      --accent-2: #c08af0;
+      --accent-fg: #14121f;
+      --accent-soft: rgba(139, 123, 245, 0.18);
+      --accent-soft-border: rgba(139, 123, 245, 0.42);
+      --danger: #f36c6c;
+      --danger-soft: rgba(243, 108, 108, 0.14);
+      --page-surface: #f3f2ee;
+      --shadow: rgba(0, 0, 0, 0.6);
+      --focus-ring: #ad9ff7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131120;
+    --panel: #1c1930;
+    --sunken: #12101d;
+    --border: #322c4d;
+    --text: #eee9f8;
+    --text-dim: #a099ba;
+    --accent: #8b7bf5;
+    --accent-2: #c08af0;
+    --accent-fg: #14121f;
+    --accent-soft: rgba(139, 123, 245, 0.18);
+    --accent-soft-border: rgba(139, 123, 245, 0.42);
+    --danger: #f36c6c;
+    --danger-soft: rgba(243, 108, 108, 0.14);
+    --page-surface: #f3f2ee;
+    --shadow: rgba(0, 0, 0, 0.6);
+    --focus-ring: #ad9ff7;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Hind Siliguri', 'Nirmala UI', 'Vrinda', system-ui, sans-serif;
+    min-height: 100vh;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  .topbar, .sidebar, .status-bar, .tool-group, .modal, .stage, .landing, .floating-bar,
+  .app-toast, .pm-card, .tool-card, .feature-card {
+    transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+  .mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; }
+
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ---------------------------------------------------------------- topbar */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 0 var(--shadow);
+    z-index: 20; flex-wrap: wrap;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px; margin-right: 4px;
+    background: transparent; border: none; padding: 2px; font: inherit; cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
+  .brand:hover .brand-name { filter: brightness(1.15); }
+  .brand-mark {
+    font-size: 17px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-border));
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .brand:hover .brand-mark { transform: rotate(-10deg) scale(1.08); }
+  .brand-name {
+    font-weight: 800; font-size: 16.5px; letter-spacing: 0.1px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .theme-toggle {
+    width: 32px; height: 32px; flex: none; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--sunken); color: var(--text); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .theme-toggle:hover { background: var(--accent-soft); border-color: var(--accent-soft-border); transform: rotate(18deg); }
+
+  .v-sep { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--border); }
+
+  .tool-group { display: flex; gap: 4px; background: var(--sunken); border-radius: 10px; padding: 3px; }
+  .tool-btn {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid transparent; background: transparent; color: var(--text-dim);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+  /* ---------------------------------------------------------------- icon sprite (svg <use>) --
+     every icon is an inline `<svg class="ic"><use href="#i-name"/></svg>` referencing the sprite
+     injected at the top of <body>. Without an explicit size here, a bare <svg> falls back to the
+     UA-default intrinsic size (300x150px) -- which is exactly what silently blew up the whole
+     layout: every button/card became huge the moment the emoji spans were swapped for <svg> icons
+     and this rule was never added. em-sized so each icon scales with its own button's font-size. */
+  .ic {
+    width: 1.15em; height: 1.15em; flex: none;
+    display: inline-block; vertical-align: -0.2em;
+    fill: none; stroke: currentColor;
+  }
+  .ic-xl { width: 28px; height: 28px; }
+  .brand-mark .ic { width: 16px; height: 16px; }
+  .theme-ic { width: 16px; height: 16px; }
+  .tc-ic .ic { width: 1.1em; height: 1.1em; }
+  .tool-btn:hover { color: var(--text); }
+  .tool-btn.active { background: var(--panel); color: var(--accent); border-color: var(--border); box-shadow: 0 1px 2px var(--shadow); }
+
+  .ghost-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .ghost-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft-border); transform: translateY(-1px); }
+  .ghost-btn:active { transform: translateY(0); }
+
+  .primary-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--accent-fg); border: 1px solid transparent;
+    border-radius: 8px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 1px 2px var(--shadow);
+    transition: filter 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .primary-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 16px var(--shadow); }
+  .primary-btn:active:not(:disabled) { transform: translateY(0); }
+  .primary-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  button:focus-visible, [contenteditable]:focus-visible, input:focus-visible {
+    outline: 2px solid var(--focus-ring); outline-offset: 2px;
+  }
+  .file-input-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+  .spacer { flex: 1 1 auto; }
+
+  /* ---------------------------------------------------------------- body layout */
+  .body-row { flex: 1; display: flex; min-height: 0; }
+
+  .sidebar {
+    width: 138px; flex: none; background: var(--panel); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 14px 10px; display: none; flex-direction: column; gap: 12px;
+  }
+  @media (max-width: 680px) { .sidebar { display: none !important; } }
+  .thumb { cursor: pointer; border-radius: 8px; padding: 4px; border: 2px solid transparent; }
+  .thumb.active { border-color: var(--accent); background: var(--accent-soft); }
+  .thumb canvas { display: block; width: 100%; height: auto; box-shadow: 0 1px 4px var(--shadow); background: #fff; }
+  .thumb-label { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  .stage-wrap {
+    flex: 1; position: relative; overflow: auto;
+    display: flex; align-items: flex-start; padding: 34px 20px 90px;
+    /* "safe center" centers the page while it fits, but falls back to start-alignment once the page
+       is wider than the viewport. Plain `center` overflows equally in BOTH directions there, and the
+       left half becomes physically unreachable by scrolling -- which is exactly what clipped the
+       page on narrow screens. The plain value stays first as a fallback for older engines. */
+    justify-content: center;
+    justify-content: safe center;
+    /* scroll still works fully (wheel/trackpad/touch/drag) -- only the native scrollbar chrome
+       (the boxy track+arrow-button look) is hidden, same treatment as .topbar's own scroll strip. */
+    scrollbar-width: none;
+  }
+  .stage-wrap::-webkit-scrollbar { display: none; }
+  .stage {
+    position: relative; background: var(--page-surface);
+    box-shadow: 0 10px 30px var(--shadow), 0 0 0 1px var(--border);
+    line-height: 0;
+  }
+  .stage canvas { display: block; }
+  .overlay { position: absolute; inset: 0; }
+  .overlay.mode-text { cursor: text; }
+  .overlay.mode-select { cursor: default; }
+
+  /* ---------------------------------------------------------------- landing (pre-upload) page --
+     the first thing every new visitor sees. #emptyState (renamed .landing) stays the exact
+     drop-zone element the JS already binds dragover/drop to, so no script changes were needed. */
+  /* overflow: hidden (not visible) -- the decorative blobs below are positioned partly outside this
+     box on purpose, but #stageWrap (its scrolling parent) has its own overflow:auto for the PDF
+     editor's zoom/pan, so anything escaping .landing was creating an invisible horizontal-scroll
+     region on EVERY screen size instead of just being clipped at the edge like a soft gradient should. */
+  .landing { position: relative; width: 100%; max-width: 1180px; margin: 0 auto; padding: 8px 24px 70px; overflow: hidden; }
+  .hero-blob {
+    position: absolute; z-index: -1; border-radius: 50%; filter: blur(70px); pointer-events: none;
+  }
+  .hero-blob-1 { width: 420px; height: 420px; top: -160px; left: -180px; background: radial-gradient(circle, var(--accent-soft-border), transparent 70%); opacity: 0.8; }
+  .hero-blob-2 { width: 380px; height: 380px; top: 40px; right: -200px; background: radial-gradient(circle, var(--accent-2), transparent 70%); opacity: 0.28; }
+
+  .landing-hero {
+    position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center; gap: 40px; padding: 56px 0 70px;
+  }
+  @media (max-width: 900px) {
+    .landing-hero { grid-template-columns: 1fr; text-align: center; gap: 34px; padding: 30px 0 40px; }
+    .hero-copy { align-items: center; }
+    .hero-trust { justify-content: center; }
+  }
+  .hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-soft-border);
+    border-radius: 999px; padding: 6px 16px; font-size: 12.5px; font-weight: 700;
+  }
+  .hero-title {
+    font-size: clamp(34px, 4.4vw, 58px); font-weight: 800; line-height: 1.15; margin: 0;
+    letter-spacing: -0.02em; text-wrap: balance;
+  }
+  .hero-accent {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero-sub { font-size: 15.5px; color: var(--text-dim); line-height: 1.75; margin: 0; max-width: 480px; }
+
+  .hero-upload-card {
+    margin-top: 4px; width: 100%; max-width: 380px;
+    background: var(--panel); border: 2px dashed var(--border); border-radius: var(--radius-lg);
+    padding: 20px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    box-shadow: 0 4px 18px var(--shadow);
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+  }
+  .landing.dragover .hero-upload-card { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.02); }
+  .hero-cta { font-size: 14.5px; padding: 11px 24px; width: 100%; justify-content: center; }
+  .hero-drophint { font-size: 12px; color: var(--text-dim); margin: 0; opacity: 0.85; }
+
+  .hero-trust { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 2px; }
+  .hero-trust span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-dim); font-weight: 600; }
+  .hero-trust .ic { width: 15px; height: 15px; color: var(--accent); flex: none; }
+
+  /* the "wow" element: a real screenshot of the editor in a lightweight browser-chrome frame,
+     mildly tilted for depth -- straightens on hover as a small, satisfying interaction. */
+  .hero-visual { display: flex; justify-content: center; }
+  .hero-mockup {
+    width: min(420px, 100%); border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--panel); border: 1px solid var(--border);
+    box-shadow: 0 24px 60px var(--shadow), 0 4px 18px var(--shadow);
+    transform: rotate(2deg); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hero-visual:hover .hero-mockup { transform: rotate(0deg) scale(1.015); }
+  .hero-mockup-bar { display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: var(--sunken); }
+  .hero-mockup-bar .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .hero-mockup-bar .dot-r { background: #f56565; }
+  .hero-mockup-bar .dot-y { background: #ecc94b; }
+  .hero-mockup-bar .dot-g { background: #48bb78; }
+  .hero-mockup-img { display: block; width: 100%; height: auto; }
+  @media (max-width: 900px) { .hero-mockup { transform: none; width: min(440px, 100%); } .hero-visual:hover .hero-mockup { transform: scale(1.01); } }
+
+  /* ---------------------------------------------------------------- landing: steps + features */
+  .landing-section-head { text-align: center; max-width: 560px; margin: 0 auto 34px; }
+  .landing-eyebrow {
+    display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .landing-section-title { font-size: clamp(22px, 2.8vw, 30px); font-weight: 800; margin: 0; }
+
+  /* ---------------------------------------------------------------- honest fact bar --
+     deliberately real, checkable facts styled the way a growth-stat bar usually is -- NOT
+     fabricated usage numbers or a customer-logo strip, since Nothi doesn't have real users to back
+     those yet and faking them would be false advertising, not a design choice. */
+  .landing-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin: 0 0 64px; padding: 26px 20px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: 0 4px 18px var(--shadow);
+  }
+  @media (max-width: 720px) { .landing-stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { text-align: center; }
+  .stat-num {
+    font-size: clamp(20px, 2.6vw, 28px); font-weight: 800; line-height: 1.2;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .stat-label { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ---------------------------------------------------------------- tabbed product showcase --
+     the highest-payoff single addition: real screenshots of Nothi's own tools (not stock art),
+     switchable by tab, in a lightweight browser-chrome frame -- shows the product instead of
+     describing it, which is what actually made the reference site look credible. */
+  .showcase { margin-bottom: 64px; }
+  .showcase-tabs {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 22px;
+  }
+  .showcase-tab {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--panel); color: var(--text-dim); border: 1px solid var(--border);
+    border-radius: 999px; padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .showcase-tab:hover { color: var(--text); border-color: var(--accent-soft-border); }
+  .showcase-tab.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-fg);
+    border-color: transparent;
+  }
+  .showcase-desc {
+    text-align: center; max-width: 480px; margin: 0 auto 22px; color: var(--text-dim);
+    font-size: 13.5px; line-height: 1.7;
+  }
+  .showcase-frame {
+    width: min(760px, 100%); margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--panel); border: 1px solid var(--border);
+    box-shadow: 0 20px 50px var(--shadow), 0 4px 18px var(--shadow);
+  }
+  .showcase-img { display: block; width: 100%; height: auto; transition: opacity 0.15s ease; }
+  .showcase-img.fading { opacity: 0; }
+
+  .landing-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 64px; position: relative; }
+  @media (max-width: 720px) { .landing-steps { grid-template-columns: 1fr; gap: 16px; } }
+  .step { position: relative; text-align: center; padding: 8px 14px; }
+  .step-num {
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+    width: 40px; height: 40px; border-radius: 50%; font-weight: 800; font-size: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-fg);
+    box-shadow: 0 6px 16px var(--shadow);
+  }
+  .step-title { font-weight: 700; font-size: 14.5px; margin-bottom: 6px; }
+  .step-desc { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; max-width: 240px; margin: 0 auto; }
+  .step-arrow { position: absolute; top: 20px; right: -28px; color: var(--border); }
+  @media (max-width: 720px) { .step-arrow { display: none; } }
+
+  .landing-features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .landing-features { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .landing-features { grid-template-columns: 1fr; } }
+  .feature-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 20px 18px; text-align: left; display: flex; flex-direction: column; gap: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .feature-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px var(--shadow); border-color: var(--accent-soft-border); }
+  .feature-ic {
+    width: 40px; height: 40px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-border)); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .feature-title { font-weight: 700; font-size: 14px; color: var(--text); }
+  .feature-desc { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+
+  /* ---------------------------------------------------------------- text boxes */
+  .textbox { position: absolute; min-width: 32px; border: 1px dashed transparent; border-radius: 3px; touch-action: none; }
+  .textbox:hover { border-color: var(--accent-soft-border); }
+  .textbox.selected { border-color: var(--accent); border-style: solid; }
+  /* top-LEFT, not top-right -- the resize handle sits vertically centered on the right edge, and
+     for any single-line (short) box that center point lands close to the top, colliding with a
+     top-right delete button. Top-left never shares space with a right-edge handle, at any height. */
+  .tb-del {
+    position: absolute; top: -10px; left: -10px; width: 18px; height: 18px;
+    border-radius: 50%; font-size: 11px; line-height: 18px; text-align: center;
+    color: #fff; background: var(--danger); cursor: pointer; display: none; user-select: none;
+  }
+  .textbox.selected .tb-del { display: block; }
+  .tb-resize {
+    position: absolute; top: 50%; right: -7px; transform: translateY(-50%);
+    width: 12px; height: 26px; border-radius: 4px; background: var(--accent);
+    cursor: ew-resize; touch-action: none; display: none;
+  }
+  .tb-resize::after {
+    content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 2px; height: 12px; background: rgba(255, 255, 255, 0.85); box-shadow: 4px 0 rgba(255, 255, 255, 0.85);
+  }
+  .textbox:hover .tb-resize, .textbox.selected .tb-resize { display: block; }
+  .tb-content {
+    display: block; width: 100%; resize: none; overflow: hidden;
+    border: none; outline: none; background: transparent; margin: 0; appearance: none;
+    padding: 1px 3px; color: #1a1a1a; cursor: text; line-height: 1.3;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .tb-content::placeholder { color: #9aa0a8; opacity: 1; }
+
+  /* ---------------------------------------------------------------- floating property bar */
+  .floating-bar {
+    position: absolute; display: none; align-items: center; gap: 3px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 5px 6px; box-shadow: 0 6px 18px var(--shadow); z-index: 15;
+  }
+  .fb-btn {
+    width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent;
+    color: var(--text); cursor: pointer; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fb-btn:hover { background: var(--sunken); }
+  .fb-btn.active { background: var(--accent-soft); color: var(--accent); }
+  .fb-size { width: 34px; text-align: center; border: 1px solid var(--border); border-radius: 6px; background: var(--sunken); color: var(--text); font-size: 12.5px; padding: 4px 2px; }
+  .fb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
+  .fb-select {
+    height: 26px; border-radius: 6px; border: 1px solid var(--border); background: var(--sunken);
+    color: var(--text); font-size: 12px; padding: 0 4px; cursor: pointer; max-width: 108px;
+  }
+  .fb-color-swatch { width: 24px; height: 24px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; display: block; }
+  .fb-color-swatch input { width: 34px; height: 34px; margin: -5px; padding: 0; border: none; cursor: pointer; }
+  .fb-danger:hover { background: var(--danger-soft); color: var(--danger); }
+  .fb-move { cursor: grab; touch-action: none; background: var(--accent-soft); color: var(--accent); }
+  .fb-move:active { cursor: grabbing; }
+
+  /* ---------------------------------------------------------------- status bar */
+  .status-bar {
+    display: none; align-items: center; gap: 4px;
+    background: var(--sunken); border-radius: 10px; padding: 3px 6px;
+  }
+  .sb-btn {
+    width: 24px; height: 24px; border-radius: 6px; border: none; background: transparent;
+    color: var(--text); cursor: pointer; font-size: 14px; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sb-btn:hover:not(:disabled) { background: var(--panel); }
+  .sb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .sb-zoom, .sb-page { font-size: 12px; color: var(--text-dim); min-width: 40px; text-align: center; }
+  .sb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+
+  /* ---------------------------------------------------------------- modals (Merge / Compress) */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  .modal-backdrop[hidden] { display: none; }
+  .modal {
+    background: var(--panel); border-radius: 14px; padding: 22px 24px;
+    width: min(480px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal h2 { margin: 0 0 8px; font-size: 17px; }
+  .modal-note { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin: 0 0 14px; }
+  .modal-file-list {
+    list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 6px;
+    max-height: 220px; overflow-y: auto;
+  }
+  .modal-file-list li {
+    display: flex; align-items: center; gap: 6px; background: var(--sunken);
+    border-radius: 8px; padding: 6px 8px; font-size: 12.5px;
+  }
+  .modal-file-list li span.fname { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-file-list li button {
+    width: 22px; height: 22px; border-radius: 6px; border: none; background: transparent;
+    color: var(--text); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .modal-file-list li button:hover { background: var(--border); }
+  div.modal-file-list { font-size: 13px; color: var(--text); padding: 6px 0; }
+  .modal-quality-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 10px 0 4px; }
+  .modal-quality-row input[type="range"] { flex: 1 1 auto; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+  /* ---------------------------------------------------------------- smart alignment guides --
+     Figma/PowerPoint/Sejda-style: no permanent grid, no toggle. A thin line appears ONLY while
+     dragging a text box, and ONLY when its edge/center lines up with another box (or the page's
+     own edges/center) -- exactly the "keep this lined up with the content above/below" behavior,
+     without the earlier always-on grid making every page look like graph paper. */
+  .align-guide { position: absolute; background: #ff3d81; pointer-events: none; z-index: 25; display: none; }
+  .align-guide.visible { display: block; }
+  .align-guide-v { top: 0; bottom: 0; width: 1px; }
+  .align-guide-h { left: 0; right: 0; height: 1px; }
+
+  /* ---------------------------------------------------------------- Tools Hub + new tool modals */
+  .modal-wide { width: min(640px, 100%); }
+
+  .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 6px 0 4px; }
+  @media (max-width: 480px) { .tool-grid { grid-template-columns: 1fr; } }
+  .tool-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+    background: var(--sunken); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease;
+  }
+  .tool-card:hover { border-color: var(--accent-soft-border); background: var(--accent-soft); }
+  .tool-card .tc-ic { font-size: 20px; }
+  .tool-card .tc-label { font-weight: 700; font-size: 13.5px; color: var(--text); }
+  .tool-card .tc-sub { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; }
+
+  .ps-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin: 8px 0; }
+  .ps-row select, .ps-row input[type="text"], .ps-row input[type="number"] {
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text);
+    padding: 5px 7px; font-size: 13px;
+  }
+  .ps-row input[type="number"] { width: 70px; }
+  .ps-row input[type="range"] { flex: 1 1 auto; }
+  .ps-check-row { font-size: 12.5px; color: var(--text-dim); }
+
+  .ps-body { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  .ps-canvas-wrap {
+    flex: 0 0 auto; background: repeating-conic-gradient(#ccc 0% 25%, #eee 0% 50%) 50% / 16px 16px;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; touch-action: none;
+    max-width: 100%;
+  }
+  .ps-canvas-wrap canvas { display: block; max-width: 100%; cursor: grab; }
+  .ps-canvas-wrap canvas:active { cursor: grabbing; }
+  .ps-controls { flex: 1 1 220px; min-width: 200px; }
+
+  .sign-canvas-wrap {
+    background: #fff; border: 1px solid var(--border); border-radius: 8px; margin: 10px 0; overflow: hidden;
+  }
+  .sign-canvas-wrap canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: crosshair; }
+  .modal-actions-split { justify-content: space-between; }
+  .modal-actions-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+  .pm-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px;
+    margin: 10px 0; max-height: 360px; overflow-y: auto; padding: 2px;
+  }
+  .pm-card {
+    border: 1px solid var(--border); border-radius: 8px; background: var(--sunken); padding: 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: grab; position: relative;
+  }
+  .pm-card.dragging { opacity: 0.4; }
+  .pm-card.drop-target { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .pm-card canvas { max-width: 100%; box-shadow: 0 1px 4px var(--shadow); background: #fff; transition: transform 0.15s ease; }
+  .pm-card .pm-label { font-size: 11px; color: var(--text-dim); }
+  .pm-card .pm-actions { display: flex; gap: 4px; }
+  .pm-card .pm-actions button {
+    width: 22px; height: 22px; border-radius: 6px; border: none; background: var(--panel);
+    color: var(--text); cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+  .pm-card .pm-actions button:hover { background: var(--border); }
+  .pm-card.marked-delete { opacity: 0.35; }
+  .pm-card.marked-delete canvas { filter: grayscale(1); }
+
+  .pm-split-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; margin: 8px 0; }
+  .pm-split-row input[type="text"] {
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text);
+    padding: 5px 7px; font-size: 13px; width: 90px;
+  }
+
+  .st-sub { padding: 4px 0 4px 26px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .st-sub input[type="text"] {
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text);
+    padding: 5px 7px; font-size: 13px; flex: 1 1 160px;
+  }
+  .st-sub select {
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text);
+    padding: 5px 7px; font-size: 13px;
+  }
+  .st-sub input[type="range"] { width: 100px; }
+
+  /* ---------------------------------------------------------------- entrance motion */
+  @keyframes nothiFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes nothiPopIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-backdrop:not([hidden]) { animation: nothiFadeIn 0.18s ease; }
+  .modal-backdrop:not([hidden]) .modal { animation: nothiPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+
+  .tool-card { transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
+  .tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--shadow); }
+
+  /* a soft glow on the primary action reads better against a dark "ink" background than a flat
+     drop shadow -- purely a dark-mode nicety, mirrors the light-mode shadow the rule above already sets */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .primary-btn:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(139, 123, 245, 0.4); }
+  }
+  :root[data-theme="dark"] .primary-btn:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(139, 123, 245, 0.4); }
+
+  /* warn-toast amber needs to shift lighter in dark mode for the same reason every other color
+     token does -- the light-mode #d97706 reads muddy against the deep ink background. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .app-toast-warn { border-left-color: #f5a524; }
+    :root:not([data-theme="light"]) .app-toast-warn .app-toast-icon { color: #f5a524; }
+  }
+  :root[data-theme="dark"] .app-toast-warn { border-left-color: #f5a524; }
+  :root[data-theme="dark"] .app-toast-warn .app-toast-icon { color: #f5a524; }
+
+  /* ---------------------------------------------------------------- narrow screens --
+     Bangladesh skews heavily mobile, so this is a primary layout, not an afterthought. At full size
+     the toolbar wrapped onto four rows and ate ~40% of a phone screen; collapsing the button labels
+     to their icons keeps it to a single row and gives the document the space it needs. */
+  @media (max-width: 900px) {
+    .topbar { gap: 6px; padding: 6px 10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .topbar::-webkit-scrollbar { display: none; }
+    .topbar > * { flex: none; }
+    .brand-name { display: none; }
+    .tool-btn span:not(.ic) { display: none; }
+    .tool-btn { padding: 6px 9px; }
+    .ghost-btn { padding: 7px 9px; }
+    .ghost-btn > span:nth-child(2) { display: none; }
+    .primary-btn { padding: 8px 12px; font-size: 12.5px; }
+    .v-sep { display: none; }
+    .stage-wrap { padding: 14px 10px 70px; }
+    /* The toolbar scrolls sideways on a phone, which would carry the primary action off-screen --
+       pin it to the right edge so "download" is always one tap away, whatever else is scrolled past. */
+    .topbar #btnDownload {
+      position: sticky; right: 0; z-index: 3;
+      box-shadow: -14px 0 12px -8px var(--panel), 0 1px 2px var(--shadow);
+    }
+    .modal { padding: 18px 16px; border-radius: 12px; }
+    .modal-actions { flex-wrap: wrap; }
+    .ps-body { gap: 12px; }
+  }
+
+  /* ---------------------------------------------------------------- toasts (replaces alert()) */
+  .toast-stack {
+    position: fixed; right: 18px; bottom: 18px; z-index: 90;
+    display: flex; flex-direction: column-reverse; gap: 10px;
+    max-width: min(380px, calc(100vw - 36px)); pointer-events: none;
+  }
+  .app-toast {
+    display: flex; align-items: flex-start; gap: 10px; pointer-events: auto;
+    background: var(--panel); color: var(--text); border: 1px solid var(--border); border-left: 3px solid var(--border);
+    border-radius: 10px; padding: 12px 12px 12px 14px; font-size: 13px; line-height: 1.55;
+    box-shadow: 0 10px 30px var(--shadow);
+    opacity: 0; transform: translateY(12px) scale(0.98);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .app-toast.visible { opacity: 1; transform: translateY(0) scale(1); }
+  .app-toast-icon { flex: none; margin-top: 1px; }
+  .app-toast-msg { flex: 1 1 auto; }
+  .app-toast-close {
+    flex: none; width: 20px; height: 20px; border: none; background: transparent; color: var(--text-dim);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 6px;
+    margin: -2px -2px 0 0;
+  }
+  .app-toast-close:hover { background: var(--sunken); color: var(--text); }
+  .app-toast-close .ic { width: 0.95em; height: 0.95em; }
+  .app-toast-error { border-left-color: var(--danger); }
+  .app-toast-error .app-toast-icon { color: var(--danger); }
+  .app-toast-warn { border-left-color: #d97706; }
+  .app-toast-warn .app-toast-icon { color: #d97706; }
+  .app-toast-success { border-left-color: var(--accent); }
+  .app-toast-success .app-toast-icon { color: var(--accent); }
+  .app-toast-info .app-toast-icon { color: var(--text-dim); }
+  @media (max-width: 480px) {
+    .toast-stack { left: 12px; right: 12px; max-width: none; }
+  }
+
+  /* ---------------------------------------------------------------- PDF loading state */
+  .loading-overlay {
+    position: absolute; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+    background: var(--bg); opacity: 0.97;
+  }
+  .loading-overlay.visible { display: flex; }
+  .loading-spinner { width: 34px; height: 34px; color: var(--accent); animation: nothiSpin 0.85s linear infinite; }
+  .loading-text { font-size: 13.5px; color: var(--text-dim); font-weight: 600; }
+  @keyframes nothiSpin { to { transform: rotate(360deg); } }
