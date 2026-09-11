@@ -140,7 +140,6 @@
     psCustomH: document.getElementById("psCustomH"),
     psZoom: document.getElementById("psZoom"),
     psBg: document.getElementById("psBg"),
-    psRemoveBg: document.getElementById("psRemoveBg"),
     psSensRow: document.getElementById("psSensRow"),
     psSensitivity: document.getElementById("psSensitivity"),
     psQuality: document.getElementById("psQuality"),

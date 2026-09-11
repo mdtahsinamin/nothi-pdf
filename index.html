@@ -348,12 +348,11 @@
         <label class="ps-row">জুম / পজিশন <input type="range" id="psZoom" min="100" max="300" value="100"></label>
         <label class="ps-row">ব্যাকগ্রাউন্ড
           <select id="psBg">
-            <option value="none">অপরিবর্তিত</option>
-            <option value="white">সাদা</option>
-            <option value="blue">নীল</option>
+            <option value="none">অপরিবর্তিত (আসল ছবি)</option>
+            <option value="white">সাদা (ব্যাকগ্রাউন্ড সরিয়ে)</option>
+            <option value="blue">নীল (ব্যাকগ্রাউন্ড সরিয়ে)</option>
           </select>
         </label>
-        <label class="ps-row ps-check-row"><input type="checkbox" id="psRemoveBg"> আসল ব্যাকগ্রাউন্ড সরানোর চেষ্টা করুন (বেসিক)</label>
         <label class="ps-row" id="psSensRow" hidden>সংবেদনশীলতা <input type="range" id="psSensitivity" min="10" max="90" value="35"></label>
         <label class="ps-row">মান (quality) <input type="range" id="psQuality" min="50" max="95" value="90"> <span class="mono" id="psQualityLabel">90%</span></label>
         <p class="modal-note" id="psRemoveNote" hidden>বেসিক রিমুভাল সবচেয়ে ভালো কাজ করে যখন আসল ব্যাকগ্রাউন্ড মোটামুটি একরঙা/সমান হয় (যেমন দেয়াল)। জটিল ব্যাকগ্রাউন্ডে পুরোপুরি নাও কাজ করতে পারে — না বুঝলে "সংবেদনশীলতা" কমিয়ে-বাড়িয়ে দেখুন।</p>

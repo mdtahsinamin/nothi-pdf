@@ -461,8 +461,16 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
           const size = (Math.min(width, height) / (text.length * 0.6 + 2)) * 2.2;
           const opacity = parseInt(els.stWmOpacity.value, 10) / 100;
           const textWidth = font.widthOfTextAtSize(text, size);
+          // pdf-lib's `rotate` spins the text around the (x,y) anchor itself, not around the
+          // text's own visual center -- placing x,y at the page's center and rotating 45deg swings
+          // the text noticeably off-center (was rendering shifted toward the top-left). Solve for
+          // the anchor that puts the ROTATED text's center back on the page's actual center.
+          const angleRad = (45 * Math.PI) / 180;
+          const dx = textWidth / 2, dy = size / 2;
+          const rotatedOffsetX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+          const rotatedOffsetY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
           page.drawText(text, {
-            x: (width - textWidth) / 2, y: (height - size) / 2,
+            x: width / 2 - rotatedOffsetX, y: height / 2 - rotatedOffsetY,
             size, font, color: PDFLib.rgb(0.5, 0.5, 0.5), opacity, rotate: PDFLib.degrees(45),
           });
         }

@@ -107,21 +107,13 @@ import { els, showToast, downloadDataUrl, closeModals } from "./core.js";
   function rebuildPsSource() {
     if (!psOriginalCanvas) return;
     const w = psOriginalCanvas.width, h = psOriginalCanvas.height;
-    if (els.psRemoveBg.checked) {
+    if (els.psBg.value !== "none") {
       const imageData = psOriginalCanvas.getContext("2d").getImageData(0, 0, w, h);
       const tolerance = parseInt(els.psSensitivity.value, 10);
       const result = applyBackgroundRemoval(imageData, tolerance, psFillRGB());
       psSourceCanvas = document.createElement("canvas");
       psSourceCanvas.width = w; psSourceCanvas.height = h;
       psSourceCanvas.getContext("2d").putImageData(result, 0, 0);
-    } else if (els.psBg.value !== "none") {
-      psSourceCanvas = document.createElement("canvas");
-      psSourceCanvas.width = w; psSourceCanvas.height = h;
-      const ctx = psSourceCanvas.getContext("2d");
-      const [r, g, b] = psFillRGB();
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(psOriginalCanvas, 0, 0);
     } else {
       psSourceCanvas = psOriginalCanvas;
     }
@@ -199,11 +191,10 @@ import { els, showToast, downloadDataUrl, closeModals } from "./core.js";
   els.psCustomW.addEventListener("input", () => { if (els.psPreset.value === "custom") applyPsPreset(); });
   els.psCustomH.addEventListener("input", () => { if (els.psPreset.value === "custom") applyPsPreset(); });
   els.psZoom.addEventListener("input", redrawPsCanvas);
-  els.psBg.addEventListener("change", rebuildPsSource);
-  els.psRemoveBg.addEventListener("change", () => {
-    els.psSensRow.hidden = !els.psRemoveBg.checked;
-    els.psRemoveNote.hidden = !els.psRemoveBg.checked;
-    if (els.psRemoveBg.checked && els.psBg.value === "none") els.psBg.value = "white";
+  els.psBg.addEventListener("change", () => {
+    const active = els.psBg.value !== "none";
+    els.psSensRow.hidden = !active;
+    els.psRemoveNote.hidden = !active;
     rebuildPsSource();
   });
   let psSensDebounce = null;
