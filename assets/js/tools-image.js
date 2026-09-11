@@ -76,7 +76,12 @@ import { els, showToast, downloadDataUrl, closeModals } from "./core.js";
     const bgMask = computeBackgroundMask(width, height, data, tolerance);
     const fgScore = new Float32Array(width * height);
     for (let i = 0; i < width * height; i++) fgScore[i] = bgMask[i] ? 0 : 255;
-    const smoothed = boxBlur(fgScore, width, height, 2);
+    // radius 1, not 2 -- this mask is computed at up-to-1000px source resolution but the Photo
+    // Studio output is often tiny (300x300, or 300x80 for a signature), so whatever softness this
+    // adds gets proportionally MAGNIFIED after the big downscale. A 2px feather on thin signature
+    // ink strokes was visibly smudging them; 1px still avoids a jagged 1-bit edge on a portrait's
+    // hair/shoulder line without eating into fine detail as much.
+    const smoothed = boxBlur(fgScore, width, height, 1);
     const out = new Uint8ClampedArray(data.length);
     for (let i = 0; i < width * height; i++) {
       const fg = smoothed[i] / 255;

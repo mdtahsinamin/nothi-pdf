@@ -68,6 +68,12 @@
   }
 
   * { box-sizing: border-box; }
+  /* Guarantees the `hidden` attribute always wins, full stop. Without this, any element that is
+     both `hidden` AND carries a class setting `display` (e.g. `.ps-row`/`.st-sub`/`.pm-split-row`,
+     all `display:flex`) stays visible anyway -- author styles override the UA default
+     `[hidden]{display:none}` regardless of specificity, so several toggled rows across Photo
+     Studio, Page Manager and Stamp Tools were silently showing even while "hidden". */
+  [hidden] { display: none !important; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -532,7 +538,10 @@
   .ps-row input[type="range"] { flex: 1 1 auto; }
   .ps-check-row { font-size: 12.5px; color: var(--text-dim); }
 
-  .ps-body { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  /* align-items: flex-start (not the flexbox default "stretch") -- otherwise the canvas side gets
+     stretched to match the controls column's full height, and for a short target like the 300x80
+     signature preset that left a big empty checkerboard void below the actual (short) image. */
+  .ps-body { display: flex; align-items: flex-start; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
   .ps-canvas-wrap {
     flex: 0 0 auto; background: repeating-conic-gradient(#ccc 0% 25%, #eee 0% 50%) 50% / 16px 16px;
     border: 1px solid var(--border); border-radius: 8px; overflow: hidden; touch-action: none;
