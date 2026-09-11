@@ -21,9 +21,14 @@ NothiPDF/
   assets/
     css/styles.css        -- সব styling
     js/
-      fonts-data.js       -- এম্বেড করা ফন্টের base64 bytes (বড়, আলাদা রাখা হয়েছে app.js পরিষ্কার রাখতে)
-      app.js              -- মূল অ্যাপ্লিকেশন লজিক
+      fonts-data.js       -- এম্বেড করা ফন্টের base64 bytes (বড়, আলাদা রাখা হয়েছে বাকি কোড পরিষ্কার রাখতে)
+      core.js             -- শেয়ার্ড ভিত্তি: ফন্ট লোডিং, DOM রেফারেন্স, থিম টগল, toast/modal সিস্টেম
+      editor.js           -- মূল PDF এডিটর: আপলোড, রেন্ডার, টেক্সট বক্স, ড্র্যাগ/রিসাইজ, এক্সপোর্ট
+      tools-pdf.js        -- Merge, Compress, ছবি→PDF, পাতা ম্যানেজার, স্ট্যাম্প টুলস
+      tools-image.js      -- ব্যাকগ্রাউন্ড রিমুভ, ফটো/স্বাক্ষর স্টুডিও, স্বাক্ষর আঁকার প্যাড
 ```
+
+জাভাস্ক্রিপ্ট ৪টা ES module-এ ভাগ করা (আগে সব একটা ~2075 লাইনের `app.js`-এ ছিল) — `core.js` বাকি তিনটার জন্য শেয়ার্ড `els`/`state`/helper রপ্তানি করে; `editor.js`/`tools-pdf.js`/`tools-image.js` একে অপরের উপর নির্ভর করে না, শুধু `core.js`-এর উপর নির্ভর করে। কোনো বিল্ড স্টেপ লাগে না — `<script type="module">` ব্রাউজারেই import/export handle করে, শুধু `file://` না খুলে local server দিয়ে চালাতে হবে (উপরের নির্দেশ অনুযায়ী)।
 
 External library (CDN থেকে লোড হয়, `<script>` ট্যাগে): pdf.js (PDF রেন্ডার), pdf-lib (PDF তৈরি/পরিবর্তন), fontkit (কাস্টম ফন্ট এম্বেড), regenerator-runtime (fontkit-এর একটা নির্ভরতা)।
 
