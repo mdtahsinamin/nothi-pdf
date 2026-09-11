@@ -28,6 +28,7 @@
 <symbol id="i-signature" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16c2.5 0 2.5-9 5-9s2.5 9 5 9 2.5-5.5 5-5.5"/><path d="M3 21h18"/></symbol>
 <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L9 18"/></symbol>
 <symbol id="i-pages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="14" height="16" rx="2"/><path d="M3 7v12a2 2 0 0 0 2 2h10"/></symbol>
+<symbol id="i-id-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5 16c.5-1.5 1.7-2.3 3-2.3s2.5.8 3 2.3"/><path d="M14 9h5"/><path d="M14 13h5"/></symbol>
 <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"/></symbol>
 <symbol id="i-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
@@ -310,7 +311,12 @@
       <button class="tool-card" id="hubOpenImgToPdf" type="button">
         <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></span>
         <span class="tc-label">ছবি → PDF</span>
-        <span class="tc-sub">একাধিক ছবি জোড়া দিয়ে PDF (NID সামনে+পেছনে একসাথে)</span>
+        <span class="tc-sub">একাধিক ছবি জোড়া দিয়ে PDF</span>
+      </button>
+      <button class="tool-card" id="hubOpenNidJoin" type="button">
+        <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-id-card"/></svg></span>
+        <span class="tc-label">NID কার্ড জোড়া দিন</span>
+        <span class="tc-sub">সামনে+পেছনে ক্রপ করে, বর্ডার দিয়ে সাজিয়ে এক ছবি/PDF বানান</span>
       </button>
       <button class="tool-card" id="hubOpenPageMgr" type="button">
         <span class="tc-ic"><svg class="ic" aria-hidden="true"><use href="#i-pages"/></svg></span>
@@ -395,6 +401,37 @@
     <div class="modal-actions">
       <button class="ghost-btn" id="i2pCancelBtn" type="button">বাতিল</button>
       <button class="primary-btn" id="i2pRunBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg><span>PDF বানিয়ে ডাউনলোড করুন</span></button>
+    </div>
+  </div>
+
+  <div class="modal modal-wide" id="nidJoinModal" hidden>
+    <h2>NID / আইডি কার্ড জোড়া দিন</h2>
+    <p class="modal-note">সামনে ও পেছনের ছবি বসান, ফ্রেমের মধ্যে টেনে ও জুম করে কার্ডটা ঠিকভাবে বসিয়ে নিন (ব্যাকগ্রাউন্ড বাদ পড়ে যাবে), তারপর জোড়া দিয়ে ডাউনলোড করুন।</p>
+    <div class="nid-slots">
+      <div class="nid-slot">
+        <div class="nid-slot-label">সামনের দিক</div>
+        <div class="ps-canvas-wrap"><canvas id="nidFrontCanvas" width="300" height="189"></canvas></div>
+        <button class="ghost-btn" id="nidFrontAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span id="nidFrontBtnLabel">ছবি বেছে নিন</span></button>
+        <input type="file" id="nidFrontInput" class="file-input-hidden" accept="image/*">
+        <label class="ps-row" id="nidFrontZoomRow" hidden>জুম / পজিশন <input type="range" id="nidFrontZoom" min="100" max="300" value="100"></label>
+      </div>
+      <div class="nid-slot">
+        <div class="nid-slot-label">পেছনের দিক</div>
+        <div class="ps-canvas-wrap"><canvas id="nidBackCanvas" width="300" height="189"></canvas></div>
+        <button class="ghost-btn" id="nidBackAddBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span id="nidBackBtnLabel">ছবি বেছে নিন</span></button>
+        <input type="file" id="nidBackInput" class="file-input-hidden" accept="image/*">
+        <label class="ps-row" id="nidBackZoomRow" hidden>জুম / পজিশন <input type="range" id="nidBackZoom" min="100" max="300" value="100"></label>
+      </div>
+    </div>
+    <div class="nid-options">
+      <label class="ps-row"><input type="radio" name="nidLayout" value="vertical" checked> উপরে-নিচে</label>
+      <label class="ps-row"><input type="radio" name="nidLayout" value="horizontal"> পাশাপাশি</label>
+      <label class="ps-row ps-check-row"><input type="checkbox" id="nidBorder" checked> কালো বর্ডার</label>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost-btn" id="nidCancelBtn" type="button">বাতিল</button>
+      <button class="ghost-btn" id="nidSaveJpgBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>JPG ডাউনলোড</span></button>
+      <button class="primary-btn" id="nidSavePdfBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>A4 PDF ডাউনলোড</span></button>
     </div>
   </div>
 

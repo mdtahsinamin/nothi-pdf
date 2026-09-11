@@ -155,6 +155,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
   els.hubOpenPhoto.addEventListener("click", () => { closeModals(); openModal(els.photoStudioModal); });
   els.hubOpenSign.addEventListener("click", () => { closeModals(); openModal(els.signPadModal); });
   els.hubOpenImgToPdf.addEventListener("click", () => { closeModals(); openModal(els.imgToPdfModal); });
+  els.hubOpenNidJoin.addEventListener("click", () => { closeModals(); openModal(els.nidJoinModal); });
   els.hubOpenPageMgr.addEventListener("click", () => { closeModals(); openModal(els.pageMgrModal); });
   els.hubOpenStamp.addEventListener("click", () => { closeModals(); openModal(els.stampModal); });
 

@@ -127,6 +127,7 @@
     hubOpenPhoto: document.getElementById("hubOpenPhoto"),
     hubOpenSign: document.getElementById("hubOpenSign"),
     hubOpenImgToPdf: document.getElementById("hubOpenImgToPdf"),
+    hubOpenNidJoin: document.getElementById("hubOpenNidJoin"),
     hubOpenPageMgr: document.getElementById("hubOpenPageMgr"),
     hubOpenStamp: document.getElementById("hubOpenStamp"),
     hubCancelBtn: document.getElementById("hubCancelBtn"),
@@ -163,6 +164,24 @@
     i2pFileList: document.getElementById("i2pFileList"),
     i2pCancelBtn: document.getElementById("i2pCancelBtn"),
     i2pRunBtn: document.getElementById("i2pRunBtn"),
+
+    nidJoinModal: document.getElementById("nidJoinModal"),
+    nidFrontCanvas: document.getElementById("nidFrontCanvas"),
+    nidFrontAddBtn: document.getElementById("nidFrontAddBtn"),
+    nidFrontInput: document.getElementById("nidFrontInput"),
+    nidFrontZoomRow: document.getElementById("nidFrontZoomRow"),
+    nidFrontZoom: document.getElementById("nidFrontZoom"),
+    nidFrontBtnLabel: document.getElementById("nidFrontBtnLabel"),
+    nidBackCanvas: document.getElementById("nidBackCanvas"),
+    nidBackAddBtn: document.getElementById("nidBackAddBtn"),
+    nidBackInput: document.getElementById("nidBackInput"),
+    nidBackZoomRow: document.getElementById("nidBackZoomRow"),
+    nidBackZoom: document.getElementById("nidBackZoom"),
+    nidBackBtnLabel: document.getElementById("nidBackBtnLabel"),
+    nidBorder: document.getElementById("nidBorder"),
+    nidCancelBtn: document.getElementById("nidCancelBtn"),
+    nidSaveJpgBtn: document.getElementById("nidSaveJpgBtn"),
+    nidSavePdfBtn: document.getElementById("nidSavePdfBtn"),
 
     pageMgrModal: document.getElementById("pageMgrModal"),
     pmAddBtn: document.getElementById("pmAddBtn"),
@@ -371,6 +390,7 @@
     els.photoStudioModal.hidden = true;
     els.signPadModal.hidden = true;
     els.imgToPdfModal.hidden = true;
+    els.nidJoinModal.hidden = true;
     els.pageMgrModal.hidden = true;
     els.stampModal.hidden = true;
   }
