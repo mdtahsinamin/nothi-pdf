@@ -214,16 +214,35 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
           page.drawImage(img, { x: (A4[0] - w) / 2, y: (A4[1] - h) / 2, width: w, height: h });
         }
       } else {
+        // NID-style "front+back on one page": dividing the page into equal slots and letting
+        // each image fill its own slot width made every card blow up to nearly the full page
+        // width (the width constraint was looser than the height one for two landscape cards).
+        // A real scanned-card sheet instead prints each card at a modest, consistent size and
+        // centers the whole stack -- so cap each image's own width first, then vertically
+        // center the resulting block on the page (only shrinking further if it still overflows).
         const page = outDoc.addPage(A4);
-        const margin = 24;
-        const slotH = (A4[1] - margin * (embedded.length + 1)) / embedded.length;
-        let y = A4[1] - margin;
-        for (const img of embedded) {
-          const scale = Math.min((A4[0] - margin * 2) / img.width, slotH / img.height, 1);
-          const w = img.width * scale, h = img.height * scale;
-          y -= h;
-          page.drawImage(img, { x: (A4[0] - w) / 2, y, width: w, height: h });
-          y -= margin;
+        const margin = 32;
+        const gap = 24;
+        const maxContentW = A4[0] - margin * 2;
+        const perImageMaxW = Math.min(maxContentW, A4[0] * 0.46);
+
+        let sized = embedded.map((img) => {
+          const scale = Math.min(perImageMaxW / img.width, 1);
+          return { img, w: img.width * scale, h: img.height * scale };
+        });
+        let totalH = sized.reduce((sum, s) => sum + s.h, 0) + gap * (sized.length - 1);
+        const maxContentH = A4[1] - margin * 2;
+        if (totalH > maxContentH) {
+          const shrink = maxContentH / totalH;
+          sized = sized.map((s) => ({ img: s.img, w: s.w * shrink, h: s.h * shrink }));
+          totalH = maxContentH;
+        }
+
+        let y = (A4[1] + totalH) / 2;
+        for (const s of sized) {
+          y -= s.h;
+          page.drawImage(s.img, { x: (A4[0] - s.w) / 2, y, width: s.w, height: s.h });
+          y -= gap;
         }
       }
 
