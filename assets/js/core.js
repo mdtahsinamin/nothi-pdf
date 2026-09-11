@@ -81,6 +81,8 @@
     statusBar: document.getElementById("statusBar"),
     toolSelect: document.getElementById("toolSelect"),
     toolText: document.getElementById("toolText"),
+    toolImage: document.getElementById("toolImage"),
+    imageBoxInput: document.getElementById("imageBoxInput"),
     btnPrev: document.getElementById("btnPrev"),
     btnNext: document.getElementById("btnNext"),
     pageNum: document.getElementById("pageNum"),

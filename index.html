@@ -55,7 +55,11 @@
       <button class="tool-btn active" id="toolText" type="button" title="টেক্সট বসান">
         <svg class="ic" aria-hidden="true"><use href="#i-type"/></svg><span>টেক্সট</span>
       </button>
+      <button class="tool-btn" id="toolImage" type="button" title="ছবি বা স্বাক্ষর বসান">
+        <svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span>ছবি/স্বাক্ষর</span>
+      </button>
     </div>
+    <input type="file" id="imageBoxInput" class="file-input-hidden" accept="image/*">
 
     <div class="v-sep"></div>
 
@@ -225,20 +229,20 @@
           <div class="align-guide align-guide-h" id="guideH"></div>
           <div class="floating-bar" id="floatingBar">
             <div class="fb-btn fb-move" id="fbMove" title="টেনে সরান"><svg class="ic" aria-hidden="true"><use href="#i-move"/></svg></div>
-            <div class="fb-sep"></div>
-            <button class="fb-btn" id="fbFontDown" type="button" title="ছোট করুন"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
-            <input type="number" id="fbFontSize" class="fb-size mono" value="16" min="6" max="96">
-            <button class="fb-btn" id="fbFontUp" type="button" title="বড় করুন"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
-            <div class="fb-sep"></div>
-            <select id="fbFont" class="fb-select" title="Font">
+            <div class="fb-sep fb-only-text"></div>
+            <button class="fb-btn fb-only-text" id="fbFontDown" type="button" title="ছোট করুন"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
+            <input type="number" id="fbFontSize" class="fb-size mono fb-only-text" value="16" min="6" max="96">
+            <button class="fb-btn fb-only-text" id="fbFontUp" type="button" title="বড় করুন"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+            <div class="fb-sep fb-only-text"></div>
+            <select id="fbFont" class="fb-select fb-only-text" title="Font">
               <option value="hind">Hind Siliguri</option>
               <option value="kalpurush">Kalpurush</option>
               <option value="tinos">Tinos (Times New Roman)</option>
             </select>
-            <button class="fb-btn" id="fbAutoFont" type="button" title="Auto Font: বাংলা+English আলাদা ফন্টে বসবে (এক্সপোর্টে)">Aa</button>
-            <div class="fb-sep"></div>
-            <button class="fb-btn" id="fbBold" type="button" title="বোল্ড">B</button>
-            <label class="fb-color-swatch" title="রং"><input type="color" id="fbColor" value="#1a1a1a"></label>
+            <button class="fb-btn fb-only-text" id="fbAutoFont" type="button" title="Auto Font: বাংলা+English আলাদা ফন্টে বসবে (এক্সপোর্টে)">Aa</button>
+            <div class="fb-sep fb-only-text"></div>
+            <button class="fb-btn fb-only-text" id="fbBold" type="button" title="বোল্ড">B</button>
+            <label class="fb-color-swatch fb-only-text" title="রং"><input type="color" id="fbColor" value="#1a1a1a"></label>
             <div class="fb-sep"></div>
             <button class="fb-btn" id="fbDuplicate" type="button" title="কপি করুন"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>
             <button class="fb-btn fb-danger" id="fbDelete" type="button" title="মুছুন"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button>

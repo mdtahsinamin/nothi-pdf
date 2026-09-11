@@ -430,6 +430,19 @@
   }
   .tb-content::placeholder { color: #9aa0a8; opacity: 1; }
 
+  /* image/signature boxes -- same draggable/selectable container as .textbox, plus a corner
+     handle that resizes both dimensions together (aspect-ratio locked) instead of the text
+     box's width-only edge handle. */
+  .imgbox-content { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; border-radius: 2px; }
+  .tb-resize-corner {
+    position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; border-radius: 4px;
+    background: var(--accent); cursor: nwse-resize; touch-action: none; display: none;
+  }
+  .tb-resize-corner::after {
+    content: ""; position: absolute; inset: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.85);
+  }
+  .textbox:hover .tb-resize-corner, .textbox.selected .tb-resize-corner { display: block; }
+
   /* ---------------------------------------------------------------- floating property bar */
   .floating-bar {
     position: absolute; display: none; align-items: center; gap: 3px;
@@ -454,6 +467,7 @@
   .fb-danger:hover { background: var(--danger-soft); color: var(--danger); }
   .fb-move { cursor: grab; touch-action: none; background: var(--accent-soft); color: var(--accent); }
   .fb-move:active { cursor: grabbing; }
+  .floating-bar.fb-image-mode .fb-only-text { display: none; }
 
   /* ---------------------------------------------------------------- status bar */
   .status-bar {

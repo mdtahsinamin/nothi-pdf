@@ -23,6 +23,76 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
   els.toolSelect.addEventListener("click", () => setMode("select"));
   els.toolText.addEventListener("click", () => setMode("text"));
 
+  // ---------------------------------------------------------------- image / signature boxes
+  // Not a persistent "mode" like select/text -- clicking it immediately opens a file picker, and
+  // the picked image is dropped onto the current page pre-centered, ready to drag/resize like any
+  // text box. No separate "click to place" step: the box needs the image's own aspect ratio before
+  // it can be drawn at all, so there's nothing useful to do between picking the file and placing it.
+  els.toolImage.addEventListener("click", () => {
+    if (!state.pdfDoc) { showToast("প্রথমে একটা PDF আপলোড করুন।", "warn"); return; }
+    els.imageBoxInput.click();
+  });
+  els.imageBoxInput.addEventListener("change", async (e) => {
+    const file = (e.target.files && e.target.files[0]) || null;
+    e.target.value = "";
+    if (file) await addImageBox(file);
+  });
+
+  function dataUrlMime(dataUrl) {
+    const m = /^data:([^;]+);base64,/.exec(dataUrl || "");
+    return m ? m[1] : "";
+  }
+
+  async function addImageBox(file) {
+    const rawDataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const img = await new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = reject;
+      im.src = rawDataUrl;
+    });
+
+    // pdf-lib can only embed PNG/JPEG -- anything else the browser accepted (webp, gif, bmp, svg)
+    // gets normalized to PNG here via canvas, once, so the export step never has to guess or fail
+    // on an unsupported format later.
+    let mime = dataUrlMime(rawDataUrl);
+    let imageDataUrl = rawDataUrl;
+    if (mime !== "image/png" && mime !== "image/jpeg") {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      imageDataUrl = canvas.toDataURL("image/png");
+      mime = "image/png";
+    }
+
+    const pageWidthPdf = state.viewport ? state.viewport.width / state.scale : 595;
+    const pageHeightPdf = state.viewport ? state.viewport.height / state.scale : 842;
+    const aspect = img.naturalHeight / img.naturalWidth || 1;
+    const widthPdf = Math.min(180, pageWidthPdf * 0.4);
+    const heightPdf = widthPdf * aspect;
+    const cx = pageWidthPdf / 2, cy = pageHeightPdf / 2;
+
+    const box = {
+      id: state.nextId++,
+      page: state.currentPage,
+      type: "image",
+      xPdf: cx - widthPdf / 2,
+      yTopPdf: cy + heightPdf / 2,
+      widthPdf, heightPdf,
+      imageDataUrl, mime,
+    };
+    state.boxes.push(box);
+    renderBoxes();
+    selectBox(box.id);
+    showToast("ছবি বসানো হয়েছে — টেনে সরান, কোণা ধরে সাইজ বদলান।", "info");
+  }
+
   // ---------------------------------------------------------------- upload
   function openPicker() { els.fileInput.click(); }
   els.btnUpload.addEventListener("click", openPicker);
@@ -125,14 +195,17 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
             const contents = streamObj.getContents ? streamObj.getContents() : streamObj.contents;
             const payload = JSON.parse(new TextDecoder().decode(contents));
             if (payload && Array.isArray(payload.boxes)) {
+              // Snapshot every persistable field (not a hand-picked list) so this works for any
+              // box type, including image boxes -- their own fields (heightPdf, imageDataUrl,
+              // mime) would otherwise be silently dropped from `_orig`, breaking the "whiteout
+              // the old footprint before redrawing" logic in the export step below.
               state.boxes = payload.boxes.map((b) => {
-                const restored = { ...b, id: state.nextId++ };
-                restored._orig = { xPdf: b.xPdf, yTopPdf: b.yTopPdf, widthPdf: b.widthPdf,
-                                    fontSize: b.fontSize, text: b.text, bold: b.bold,
-                                    fontKey: b.fontKey, autoFont: b.autoFont };
+                const { id: _oldId, _orig: _oldOrig, ...rest } = b;
+                const restored = { ...rest, id: state.nextId++ };
+                restored._orig = { ...rest };
                 return restored;
               });
-              console.log(`[Nothi] restored ${state.boxes.length} text box(es) from this PDF's saved data.`);
+              console.log(`[Nothi] restored ${state.boxes.length} box(es) from this PDF's saved data.`);
             } else {
               showToast("এই PDF-এ Nothi-এর সেভ করা তথ্য পাওয়া গেছে, কিন্তু তার ভেতরে box তালিকা নেই -- ফাঁকা অবস্থা থেকে শুরু করা হচ্ছে।", "info");
             }
@@ -296,12 +369,42 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
     div.dataset.id = String(box.id);
     div.style.left = pos.x + "px";
     div.style.top = pos.y + "px";
-    div.style.width = box.widthPdf * state.scale + "px";
 
     const del = document.createElement("div");
     del.className = "tb-del";
     del.textContent = "×";
     del.title = "মুছুন";
+    del.addEventListener("pointerdown", (e) => e.stopPropagation());
+    del.addEventListener("click", (e) => { e.stopPropagation(); deleteBox(box.id); });
+
+    if (box.type === "image") {
+      div.style.width = box.widthPdf * state.scale + "px";
+      div.style.height = box.heightPdf * state.scale + "px";
+
+      const img = document.createElement("img");
+      img.className = "imgbox-content";
+      img.src = box.imageDataUrl;
+      img.draggable = false;
+      img.alt = "";
+
+      const resizeCorner = document.createElement("div");
+      resizeCorner.className = "tb-resize-corner";
+      resizeCorner.title = "টেনে সাইজ বদলান";
+      resizeCorner.addEventListener("pointerdown", (e) => startResizeImage(e, box, div));
+
+      div.addEventListener("pointerdown", (e) => {
+        if (e.target !== div && e.target !== img) return;
+        e.preventDefault();
+        startDrag(e, box, div);
+      });
+
+      div.appendChild(img);
+      div.appendChild(del);
+      div.appendChild(resizeCorner);
+      return div;
+    }
+
+    div.style.width = box.widthPdf * state.scale + "px";
 
     const resizeHandle = document.createElement("div");
     resizeHandle.className = "tb-resize";
@@ -340,9 +443,6 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
       }, 150);
     });
 
-    del.addEventListener("pointerdown", (e) => e.stopPropagation());
-    del.addEventListener("click", (e) => { e.stopPropagation(); deleteBox(box.id); });
-
     resizeHandle.addEventListener("pointerdown", (e) => startResize(e, box, div));
 
     div.addEventListener("pointerdown", (e) => {
@@ -370,11 +470,15 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
     });
     const box = id == null ? null : state.boxes.find((b) => b.id === id);
     if (!box) { hideFloatingBar(); return; }
-    els.fbFontSize.value = box.fontSize;
-    els.fbBold.classList.toggle("active", !!box.bold);
-    els.fbColor.value = box.color;
-    els.fbFont.value = box.fontKey || "hind";
-    els.fbAutoFont.classList.toggle("active", !!box.autoFont);
+    const isImage = box.type === "image";
+    els.floatingBar.classList.toggle("fb-image-mode", isImage);
+    if (!isImage) {
+      els.fbFontSize.value = box.fontSize;
+      els.fbBold.classList.toggle("active", !!box.bold);
+      els.fbColor.value = box.color;
+      els.fbFont.value = box.fontKey || "hind";
+      els.fbAutoFont.classList.toggle("active", !!box.autoFont);
+    }
     positionFloatingBar(box);
   }
   function hideFloatingBar() { els.floatingBar.style.display = "none"; }
@@ -384,7 +488,8 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
     const barH = els.floatingBar.offsetHeight || 36;
     const barW = els.floatingBar.offsetWidth || 190;
     let top = pos.y - barH - 8;
-    if (top < 4) top = pos.y + box.fontSize * state.scale + 8;
+    const boxHeightCss = (box.fontSize != null ? box.fontSize : box.heightPdf || 20) * state.scale;
+    if (top < 4) top = pos.y + boxHeightCss + 8;
     let left = Math.max(4, Math.min(pos.x, els.overlay.clientWidth - barW - 4));
     els.floatingBar.style.top = top + "px";
     els.floatingBar.style.left = left + "px";
@@ -435,6 +540,7 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
     const box = {
       id: state.nextId++,
       page: state.currentPage,
+      type: "text",
       xPdf: p.x,
       yTopPdf: p.y,
       widthPdf: 240,
@@ -467,6 +573,34 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
       box.widthPdf = newWidthCss / state.scale;
       el.style.width = newWidthCss + "px";
       if (content) autoResizeTextarea(content);
+      positionFloatingBar(box);
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  // Image/signature boxes resize both dimensions together from a corner handle, keeping the
+  // original aspect ratio -- unlike a text box, there's no wrapped-text reflow to fall back on,
+  // so a free (non-proportional) resize would just stretch/squash the picture.
+  function startResizeImage(e, box, el) {
+    e.preventDefault();
+    e.stopPropagation();
+    selectBox(box.id);
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* not supported for this pointer type -- fine */ }
+    const startX = e.clientX;
+    const startWidthCss = box.widthPdf * state.scale;
+    const aspect = box.heightPdf / box.widthPdf;
+
+    function onMove(ev) {
+      const newWidthCss = Math.max(20, startWidthCss + (ev.clientX - startX));
+      box.widthPdf = newWidthCss / state.scale;
+      box.heightPdf = box.widthPdf * aspect;
+      el.style.width = newWidthCss + "px";
+      el.style.height = (box.heightPdf * state.scale) + "px";
       positionFloatingBar(box);
     }
     function onUp() {
@@ -551,7 +685,7 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
 
     d.el.style.left = x + "px";
     d.el.style.top = y + "px";
-    positionFloatingBar({ xPdf: cssToPdf(x, y).x, yTopPdf: cssToPdf(x, y).y, fontSize: d.box.fontSize });
+    positionFloatingBar({ xPdf: cssToPdf(x, y).x, yTopPdf: cssToPdf(x, y).y, fontSize: d.box.fontSize, heightPdf: d.box.heightPdf });
   }
   function onDragEnd() {
     const d = state.dragging;
@@ -828,18 +962,49 @@ import { els, state, FONT_LIBRARY, BN_FONT_READY, b64ToUint8Array, showToast, sa
           color: PDFLib.rgb(1, 1, 1),
         });
       }
+      // An image box's old footprint is just its own rectangle -- no text-wrap measuring needed.
+      function whiteoutOrigImage(page, orig) {
+        page.drawRectangle({
+          x: orig.xPdf, y: orig.yTopPdf - orig.heightPdf,
+          width: orig.widthPdf, height: orig.heightPdf,
+          color: PDFLib.rgb(1, 1, 1),
+        });
+      }
 
       // Boxes restored from a previous export, then deleted/emptied in this session -- their old
-      // text must disappear even though there's no current box left to draw over it.
+      // content must disappear even though there's no current box left to draw over it.
       for (const orig of state.deletedRestoredBoxes) {
         const page = pages[orig.page - 1];
-        if (page) whiteoutOrig(page, orig);
+        if (!page) continue;
+        if (orig.type === "image") whiteoutOrigImage(page, orig);
+        else whiteoutOrig(page, orig);
       }
 
       for (const box of state.boxes) {
-        if (!box.text || !box.text.trim()) continue;
         const page = pages[box.page - 1];
         if (!page) continue;
+
+        if (box.type === "image") {
+          if (!box.imageDataUrl) continue;
+          if (box._orig) whiteoutOrigImage(page, box._orig);
+          try {
+            const base64 = box.imageDataUrl.split(",")[1] || "";
+            const imgBytes = b64ToUint8Array(base64);
+            const embedded = box.mime === "image/png"
+              ? await outDoc.embedPng(imgBytes)
+              : await outDoc.embedJpg(imgBytes);
+            page.drawImage(embedded, {
+              x: box.xPdf, y: box.yTopPdf - box.heightPdf,
+              width: box.widthPdf, height: box.heightPdf,
+            });
+          } catch (err) {
+            console.error("Could not embed an image box:", err);
+            showToast("একটা ছবি PDF-এ বসাতে সমস্যা হয়েছে: " + err.message, "error");
+          }
+          continue;
+        }
+
+        if (!box.text || !box.text.trim()) continue;
         const fontDef = FONT_LIBRARY[box.fontKey] || FONT_LIBRARY.hind;
         const fontSet = embeds[box.fontKey] || embeds.hind;
         const useTrueBold = box.bold && fontDef.hasBold;
