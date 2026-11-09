@@ -1,7 +1,10 @@
 // PDF-manipulation tools that operate on independently-uploaded files (not the document open in
 // the main editor): Merge, Compress, the Tools Hub launcher, Images->PDF, Page Manager, Stamp Tools.
 "use strict";
-import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals, b64ToUint8Array } from "./core.js";
+import {
+  els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals, b64ToUint8Array, fileBaseName,
+  promptDialog, loadCryptoPdfLib, decryptPdfBytes, getOcrWorker, setOcrProgressHandler,
+} from "./core.js";
 
   // ---- Merge ----
   let mergeFiles = [];
@@ -138,7 +141,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
       }
 
       const outBytes = await outDoc.save();
-      saveFileToDisk("compressed.pdf", outBytes);
+      saveFileToDisk(`${fileBaseName(compressFile, "nothi")}-compressed.pdf`, outBytes);
       closeModals();
     } catch (err) {
       console.error(err);
@@ -264,6 +267,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
   let pmFile = null;
   let pmSrcDoc = null;
   let pmPages = [];
+  const pmThumbCache = new Map();
 
   function parsePageRange(str, numPages) {
     const indices = [];
@@ -286,6 +290,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
   async function loadPageMgrFile(file) {
     pmFile = file;
     const bytes = new Uint8Array(await file.arrayBuffer());
+    pmThumbCache.clear();
     pmSrcDoc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
     pmPages = [];
     for (let i = 0; i < pmSrcDoc.numPages; i++) pmPages.push({ originalIndex: i, rotation: 0, deleted: false });
@@ -303,15 +308,22 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
       card.draggable = true;
       card.dataset.slot = String(slot);
 
-      const canvas = document.createElement("canvas");
-      const page = await pmSrcDoc.getPage(entry.originalIndex + 1);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const thumbScale = 120 / Math.max(baseViewport.width, baseViewport.height);
-      const totalRotation = ((page.rotate || 0) + entry.rotation) % 360;
-      const viewport = page.getViewport({ scale: thumbScale, rotation: totalRotation });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      // rendered once per page+rotation and reused -- rotating or dragging one card used to
+      // re-render every page of the PDF
+      const cacheKey = entry.originalIndex + ":" + entry.rotation;
+      let canvas = pmThumbCache.get(cacheKey);
+      if (!canvas) {
+        canvas = document.createElement("canvas");
+        const page = await pmSrcDoc.getPage(entry.originalIndex + 1);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const thumbScale = 120 / Math.max(baseViewport.width, baseViewport.height);
+        const totalRotation = ((page.rotate || 0) + entry.rotation) % 360;
+        const viewport = page.getViewport({ scale: thumbScale, rotation: totalRotation });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        pmThumbCache.set(cacheKey, canvas);
+      }
       card.appendChild(canvas);
 
       const label = document.createElement("div");
@@ -388,7 +400,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
         outDoc.addPage(page);
       });
       const outBytes = await outDoc.save();
-      saveFileToDisk("edited-pages.pdf", outBytes);
+      saveFileToDisk(`${fileBaseName(pmFile, "nothi")}-pages.pdf`, outBytes);
       closeModals();
     } catch (err) {
       console.error(err);
@@ -419,7 +431,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
       const copied = await outDoc.copyPages(srcDoc, indices);
       copied.forEach((p) => outDoc.addPage(p));
       const outBytes = await outDoc.save();
-      saveFileToDisk("split.pdf", outBytes);
+      saveFileToDisk(`${fileBaseName(pmFile, "nothi")}-split.pdf`, outBytes);
     } catch (err) {
       console.error(err);
       showToast("Split করতে সমস্যা হয়েছে: " + err.message, "error");
@@ -510,7 +522,7 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
       });
 
       const outBytes = await outDoc.save();
-      saveFileToDisk("stamped.pdf", outBytes);
+      saveFileToDisk(`${fileBaseName(stFile, "nothi")}-stamped.pdf`, outBytes);
       closeModals();
     } catch (err) {
       console.error(err);
@@ -519,4 +531,231 @@ import { els, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals
       els.stRunBtn.disabled = false;
       els.stRunBtn.textContent = original;
     }
+  });
+
+
+  // ---------------------------------------------------------------- Password: protect / unlock
+  // Picks the job from the file itself: an encrypted PDF gets unlocked (password asked, checked in
+  // place), a normal one gets protected. All in the browser -- passwords never leave the device.
+  let secFile = null, secBytes = null, secEncrypted = false;
+  els.hubOpenSecure.addEventListener("click", () => { closeModals(); resetSecure(); openModal(els.secureModal); });
+  els.secCancelBtn.addEventListener("click", closeModals);
+  els.secAddBtn.addEventListener("click", () => els.secFileInput.click());
+  function resetSecure() {
+    secFile = null; secBytes = null; secEncrypted = false;
+    els.secFileName.textContent = "";
+    els.secStatus.hidden = true;
+    els.secProtectBox.hidden = true;
+    els.secPassword.value = ""; els.secPassword2.value = "";
+    els.secRunBtn.disabled = true;
+    els.secRunLabel.textContent = "চালান";
+  }
+  els.secFileInput.addEventListener("change", async (e) => {
+    const f = (e.target.files && e.target.files[0]) || null;
+    e.target.value = "";
+    if (!f) return;
+    resetSecure();
+    secFile = f;
+    secBytes = new Uint8Array(await f.arrayBuffer());
+    els.secFileName.textContent = f.name;
+    try {
+      const probe = await PDFLib.PDFDocument.load(secBytes.slice(), { ignoreEncryption: true });
+      secEncrypted = probe.isEncrypted;
+    } catch (err) {
+      showToast("এই PDF পড়া যায়নি: " + err.message, "error");
+      return;
+    }
+    els.secStatus.hidden = false;
+    if (secEncrypted) {
+      els.secStatus.className = "sec-status locked";
+      els.secStatus.textContent = "এই PDF পাসওয়ার্ড দিয়ে সুরক্ষিত — পাসওয়ার্ড দিয়ে খুলে একটা সাধারণ (পাসওয়ার্ড-ছাড়া) কপি বানানো যাবে।";
+      els.secRunLabel.textContent = "পাসওয়ার্ড সরান";
+    } else {
+      els.secStatus.className = "sec-status open";
+      els.secStatus.textContent = "এই PDF-এ কোনো পাসওয়ার্ড নেই — নিচে পাসওয়ার্ড দিয়ে সুরক্ষিত করুন।";
+      els.secProtectBox.hidden = false;
+      els.secRunLabel.textContent = "পাসওয়ার্ড দিন";
+      setTimeout(() => els.secPassword.focus(), 0);
+    }
+    els.secRunBtn.disabled = false;
+  });
+  els.secRunBtn.addEventListener("click", async () => {
+    if (!secBytes) return;
+    const base = fileBaseName(secFile, "nothi");
+    if (secEncrypted) {
+      // owner-only restrictions open with an empty password; otherwise ask
+      let out = null;
+      try { out = await decryptPdfBytes(secBytes, ""); } catch (err) { out = null; }
+      if (!out) {
+        const pw = await promptDialog({
+          title: "পাসওয়ার্ড দিন", type: "password", okLabel: "খুলুন", okIcon: "unlock",
+          note: "যে পাসওয়ার্ড দিয়ে এই PDF খোলেন সেটা লিখুন।",
+          validate: async (v) => {
+            try { out = await decryptPdfBytes(secBytes, v); return null; } catch (err) { return err.message; }
+          },
+        });
+        if (pw == null) return;
+      }
+      const saved = await saveFileToDisk(base + "-unlocked.pdf", out);
+      if (saved) { closeModals(); showToast("পাসওয়ার্ড সরানো PDF ডাউনলোড হয়েছে।", "success"); }
+      return;
+    }
+    const pw = els.secPassword.value;
+    if (pw.length < 4) { showToast("পাসওয়ার্ড অন্তত ৪ অক্ষরের দিন।", "warn"); return; }
+    if (pw !== els.secPassword2.value) { showToast("দুটো পাসওয়ার্ড মেলেনি।", "warn"); return; }
+    const label = els.secRunLabel.textContent;
+    els.secRunBtn.disabled = true;
+    els.secRunLabel.textContent = "সুরক্ষিত হচ্ছে...";
+    try {
+      const C = await loadCryptoPdfLib();
+      const doc = await C.PDFDocument.load(secBytes.slice());
+      // a separate random owner password: the user password opens the file, and the chosen
+      // restrictions (print/copy) can't be lifted with it
+      const owner = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+      doc.encrypt({
+        userPassword: pw,
+        ownerPassword: owner,
+        permissions: {
+          printing: els.secNoPrint.checked ? false : "highResolution",
+          copying: !els.secNoCopy.checked,
+          modifying: false,
+          annotating: true,
+          fillingForms: true,
+          contentAccessibility: true,
+          documentAssembly: false,
+        },
+      });
+      const out = await doc.save();
+      const saved = await saveFileToDisk(base + "-protected.pdf", out);
+      if (saved) { closeModals(); showToast("পাসওয়ার্ড-সুরক্ষিত PDF ডাউনলোড হয়েছে। পাসওয়ার্ডটা মনে রাখুন — ভুলে গেলে ফাইল খোলা যাবে না।", "success", 7000); }
+    } catch (err) {
+      console.error(err);
+      showToast("সুরক্ষিত করা যায়নি: " + err.message, "error");
+    } finally {
+      els.secRunBtn.disabled = false;
+      els.secRunLabel.textContent = label;
+    }
+  });
+
+  // ---------------------------------------------------------------- OCR: scanned PDF -> searchable PDF + text
+  // Each page is rendered sharp, read with Tesseract (Bangla + English), and the recognised words
+  // are laid on the page as invisible text at their exact positions -- the page looks identical,
+  // but can now be searched, selected and copied. The plain text is also offered on its own.
+  let ocrFile = null, ocrText = "";
+  els.hubOpenOcr.addEventListener("click", () => { closeModals(); resetOcr(); openModal(els.ocrModal); });
+  els.ocrCancelBtn.addEventListener("click", closeModals);
+  els.ocrAddBtn.addEventListener("click", () => els.ocrFileInput.click());
+  function resetOcr() {
+    ocrFile = null; ocrText = "";
+    els.ocrFileName.textContent = "";
+    els.ocrProgress.hidden = true;
+    els.ocrResult.hidden = true;
+    els.ocrResult.value = "";
+    els.ocrCopyBtn.hidden = true;
+    els.ocrTxtBtn.hidden = true;
+    els.ocrRunBtn.disabled = true;
+  }
+  els.ocrFileInput.addEventListener("change", (e) => {
+    const f = (e.target.files && e.target.files[0]) || null;
+    e.target.value = "";
+    if (!f) return;
+    resetOcr();
+    ocrFile = f;
+    els.ocrFileName.textContent = f.name;
+    els.ocrRunBtn.disabled = false;
+  });
+  function ocrSetProgress(frac, text) {
+    els.ocrProgress.hidden = false;
+    els.ocrProgressBar.style.width = Math.round(frac * 100) + "%";
+    els.ocrProgressText.textContent = text;
+  }
+  const BN = "০১২৩৪৫৬৭৮৯";
+  const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
+  els.ocrRunBtn.addEventListener("click", async () => {
+    if (!ocrFile) return;
+    els.ocrRunBtn.disabled = true;
+    try {
+      let bytes = new Uint8Array(await ocrFile.arrayBuffer());
+      const isImage = /^image\//.test(ocrFile.type);
+      let outDoc, pdfDoc = null, pageCount = 1;
+      if (isImage) {
+        outDoc = await PDFLib.PDFDocument.create();
+      } else {
+        try { pdfDoc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise; }
+        catch (err) { throw new Error("PDF খোলা যায়নি (পাসওয়ার্ড থাকলে আগে \"পাসওয়ার্ড\" টুল দিয়ে খুলুন)।"); }
+        pageCount = pdfDoc.numPages;
+        outDoc = await PDFLib.PDFDocument.load(bytes.slice(), { ignoreEncryption: true });
+      }
+      outDoc.registerFontkit(window.fontkit);
+      const font = await outDoc.embedFont(b64ToUint8Array(FONT_REGULAR_B64), { subset: true });
+      ocrSetProgress(0, "OCR প্রস্তুত হচ্ছে (প্রথমবার ভাষার ডেটা নামাতে একটু সময় লাগে)...");
+      let pageNow = 1;
+      const worker = await getOcrWorker((m) => {
+        if (m.status === "recognizing text") ocrSetProgress(((pageNow - 1) + (m.progress || 0)) / pageCount, "পাতা " + bn(pageNow) + " / " + bn(pageCount) + " পড়া হচ্ছে...");
+      });
+      setOcrProgressHandler((m) => {
+        if (m.status === "recognizing text") ocrSetProgress(((pageNow - 1) + (m.progress || 0)) / pageCount, "পাতা " + bn(pageNow) + " / " + bn(pageCount) + " পড়া হচ্ছে...");
+      });
+      const allText = [];
+      for (pageNow = 1; pageNow <= pageCount; pageNow++) {
+        let canvas, pageW, pageH, outPage;
+        if (isImage) {
+          const img = await createImageBitmap(ocrFile);
+          canvas = document.createElement("canvas");
+          canvas.width = img.width; canvas.height = img.height;
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          const jpg = await outDoc.embedJpg(b64ToUint8Array(canvas.toDataURL("image/jpeg", 0.9).split(",")[1]));
+          pageW = 595; pageH = 595 * img.height / img.width;
+          outPage = outDoc.addPage([pageW, pageH]);
+          outPage.drawImage(jpg, { x: 0, y: 0, width: pageW, height: pageH });
+        } else {
+          const page = await pdfDoc.getPage(pageNow);
+          const base = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: Math.min(3.5, 2400 / base.width) });
+          canvas = document.createElement("canvas");
+          canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height);
+          await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+          outPage = outDoc.getPage(pageNow - 1);
+          canvas._vp = vp;
+        }
+        const { data } = await worker.recognize(canvas);
+        allText.push((data.text || "").trim());
+        const toPdf = (x, y) => (canvas._vp ? canvas._vp.convertToPdfPoint(x, y) : [x * pageW / canvas.width, pageH - y * pageH / canvas.height]);
+        for (const w of data.words || []) {
+          const t = (w.text || "").trim();
+          if (!t || (w.confidence != null && w.confidence < 30)) continue;
+          const a = toPdf(w.bbox.x0, w.bbox.y1), b = toPdf(w.bbox.x1, w.bbox.y0);
+          const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
+          const y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+          let size = Math.max(3, (y1 - y0) * 0.85);
+          try {
+            const natural = font.widthOfTextAtSize(t, size);
+            if (natural > 0) size = Math.max(3, Math.min(size * 1.6, size * (x1 - x0) / natural));
+            outPage.drawText(t, { x: x0, y: y0 + (y1 - y0) * 0.18, size, font, opacity: 0 });
+          } catch (err) { /* a glyph the font lacks -- skip that word */ }
+        }
+      }
+      setOcrProgressHandler(null);
+      ocrText = allText.join("\n\n");
+      els.ocrResult.value = ocrText;
+      els.ocrResult.hidden = false;
+      els.ocrCopyBtn.hidden = false;
+      els.ocrTxtBtn.hidden = false;
+      ocrSetProgress(1, "সম্পন্ন — " + bn(pageCount) + "টি পাতা পড়া হয়েছে। OCR-এ ছোটখাটো ভুল থাকতে পারে।");
+      const out = await outDoc.save();
+      await saveFileToDisk(fileBaseName(ocrFile, "nothi") + "-searchable.pdf", out);
+    } catch (err) {
+      console.error(err);
+      setOcrProgressHandler(null);
+      showToast(err.message || "OCR করা যায়নি।", "error");
+    } finally {
+      els.ocrRunBtn.disabled = false;
+    }
+  });
+  els.ocrCopyBtn.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(els.ocrResult.value); showToast("লেখা কপি হয়েছে।", "success", 2000); }
+    catch (err) { els.ocrResult.select(); document.execCommand("copy"); }
+  });
+  els.ocrTxtBtn.addEventListener("click", () => {
+    saveFileToDisk(fileBaseName(ocrFile, "nothi") + ".txt", new TextEncoder().encode(els.ocrResult.value), "text/plain;charset=utf-8");
   });

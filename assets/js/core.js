@@ -210,6 +210,65 @@
     stCancelBtn: document.getElementById("stCancelBtn"),
     stRunBtn: document.getElementById("stRunBtn"),
     btnThemeToggle: document.getElementById("btnThemeToggle"),
+
+    // editor: edit-existing-text, shapes, undo/redo, mode hint, autosave restore
+    toolEdit: document.getElementById("toolEdit"),
+    toolShape: document.getElementById("toolShape"),
+    toolShapeIcon: document.getElementById("toolShapeIcon"),
+    shapeMenu: document.getElementById("shapeMenu"),
+    btnUndo: document.getElementById("btnUndo"),
+    btnRedo: document.getElementById("btnRedo"),
+    modeHint: document.getElementById("modeHint"),
+    modeHintText: document.getElementById("modeHintText"),
+    modeHintAction: document.getElementById("modeHintAction"),
+    fbStroke: document.getElementById("fbStroke"),
+    fbFill: document.getElementById("fbFill"),
+    fbLineHeight: document.getElementById("fbLineHeight"),
+    btnPageNumbers: document.getElementById("btnPageNumbers"),
+    pageNumModal: document.getElementById("pageNumModal"),
+    pnFormat: document.getElementById("pnFormat"),
+    pnPosition: document.getElementById("pnPosition"),
+    pnDigits: document.getElementById("pnDigits"),
+    pnStart: document.getElementById("pnStart"),
+    pnSize: document.getElementById("pnSize"),
+    pnRange: document.getElementById("pnRange"),
+    pnCancelBtn: document.getElementById("pnCancelBtn"),
+    pnApplyBtn: document.getElementById("pnApplyBtn"),
+    insertPdfInput: document.getElementById("insertPdfInput"),
+    restoreCard: document.getElementById("restoreCard"),
+    restoreName: document.getElementById("restoreName"),
+    restoreTime: document.getElementById("restoreTime"),
+    restoreBtn: document.getElementById("restoreBtn"),
+    restoreDiscardBtn: document.getElementById("restoreDiscardBtn"),
+
+    // tools: password protect/unlock, OCR
+    hubOpenSecure: document.getElementById("hubOpenSecure"),
+    hubOpenOcr: document.getElementById("hubOpenOcr"),
+    secureModal: document.getElementById("secureModal"),
+    secAddBtn: document.getElementById("secAddBtn"),
+    secFileInput: document.getElementById("secFileInput"),
+    secFileName: document.getElementById("secFileName"),
+    secStatus: document.getElementById("secStatus"),
+    secProtectBox: document.getElementById("secProtectBox"),
+    secPassword: document.getElementById("secPassword"),
+    secPassword2: document.getElementById("secPassword2"),
+    secNoPrint: document.getElementById("secNoPrint"),
+    secNoCopy: document.getElementById("secNoCopy"),
+    secCancelBtn: document.getElementById("secCancelBtn"),
+    secRunBtn: document.getElementById("secRunBtn"),
+    secRunLabel: document.getElementById("secRunLabel"),
+    ocrModal: document.getElementById("ocrModal"),
+    ocrAddBtn: document.getElementById("ocrAddBtn"),
+    ocrFileInput: document.getElementById("ocrFileInput"),
+    ocrFileName: document.getElementById("ocrFileName"),
+    ocrProgress: document.getElementById("ocrProgress"),
+    ocrProgressBar: document.getElementById("ocrProgressBar"),
+    ocrProgressText: document.getElementById("ocrProgressText"),
+    ocrResult: document.getElementById("ocrResult"),
+    ocrCopyBtn: document.getElementById("ocrCopyBtn"),
+    ocrTxtBtn: document.getElementById("ocrTxtBtn"),
+    ocrCancelBtn: document.getElementById("ocrCancelBtn"),
+    ocrRunBtn: document.getElementById("ocrRunBtn"),
   };
 
   // ---------------------------------------------------------------- theme (light/dark, explicit toggle)
@@ -227,7 +286,7 @@
     return systemPrefersDark();
   }
   function updateThemeToggleIcon() {
-    els.btnThemeToggle.textContent = isDarkActive() ? "☀️" : "\u{1F319}";
+    els.btnThemeToggle.innerHTML = '<svg class="ic theme-ic" aria-hidden="true"><use href="#i-' + (isDarkActive() ? "sun" : "moon") + '"/></svg>';
   }
   function applyTheme(theme) {
     if (theme === "light" || theme === "dark") {
@@ -252,20 +311,13 @@
     try { localStorage.setItem(THEME_KEY, next); } catch (err) { /* private mode etc -- fine, just won't persist */ }
   });
 
-  // ---------------------------------------------------------------- landing: tabbed showcase
-  const showcaseImg = document.getElementById("showcaseImg");
-  const showcaseDesc = document.getElementById("showcaseDesc");
-  document.querySelectorAll(".showcase-tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (btn.classList.contains("active")) return;
-      document.querySelectorAll(".showcase-tab").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      showcaseImg.classList.add("fading");
-      setTimeout(() => {
-        showcaseImg.src = btn.dataset.img;
-        showcaseImg.classList.remove("fading");
-      }, 150);
-      showcaseDesc.textContent = btn.dataset.desc;
+  // ---------------------------------------------------------------- landing: tool tiles
+  // Each tile just presses the matching (already wired) Tools Hub / upload button, so a tool
+  // opens straight from the landing page in one click instead of hub -> tool.
+  document.querySelectorAll("[data-open]").forEach((tile) => {
+    tile.addEventListener("click", () => {
+      const target = document.getElementById(tile.dataset.open);
+      if (target) target.click();
     });
   });
 
@@ -341,20 +393,165 @@
     setTimeout(dismiss, duration || TOAST_DURATION[type] || 4500);
   }
 
-  // Standard browser download (Blob + a temporary <a download> link) -- this is a real,
-  // standalone site now, not running inside the Claude Artifact sandbox, so there's no
-  // window.claude "downloads" capability to lean on. This works in every modern browser.
-  function saveFileToDisk(filename, data) {
-    const blob = new Blob([data], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
+  // ---------------------------------------------------------------- "name your file" dialog
+  // Every download in the app goes through saveFileToDisk()/downloadDataUrl(), so the rename step
+  // lives here once instead of in each tool. It's its own overlay (not inside #modalBackdrop) on
+  // purpose: tools call closeModals() right after starting a download, and that must not also
+  // close this dialog. The real <a download> click happens inside the dialog's submit handler, so
+  // it still counts as a user gesture and browsers don't block it.
+  const ILLEGAL_FILENAME_CHARS = /[\\/:*?"<>|\u0000-\u001f]/g;
+  function splitExt(name) {
+    const m = /^(.*?)(\.[a-z0-9]{1,5})$/i.exec(name);
+    return m ? { base: m[1], ext: m[2] } : { base: name, ext: "" };
+  }
+  // Turns whatever the user typed into a safe file name that still ends in the right extension
+  // (typing "my form" for a PDF gives "my form.pdf", never an extension-less file).
+  function cleanFileName(typed, defaultName) {
+    const { ext } = splitExt(defaultName);
+    let name = String(typed || "").replace(ILLEGAL_FILENAME_CHARS, "").replace(/\s+/g, " ").trim();
+    name = name.replace(/^\.+/, "").replace(/[. ]+$/, "");
+    if (ext && name.toLowerCase().endsWith(ext.toLowerCase())) name = name.slice(0, -ext.length).trim();
+    if (!name) return defaultName;
+    return name.slice(0, 150) + ext;
+  }
+  // Base name of an uploaded file, for building defaults like "invoice-edited.pdf".
+  function fileBaseName(file, fallback) {
+    if (!file || !file.name) return fallback;
+    const base = splitExt(file.name).base.replace(ILLEGAL_FILENAME_CHARS, "").trim();
+    return base || fallback;
+  }
+
+  // One reusable "type a value" dialog (file name, password, ...). Its own overlay, not inside
+  // #modalBackdrop, so a tool calling closeModals() right after starting a download never closes it.
+  let promptDialogEls = null;
+  function buildPromptDialog() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-backdrop filename-backdrop";
+    overlay.hidden = true;
+    overlay.innerHTML =
+      '<form class="modal filename-modal" role="dialog" aria-modal="true" aria-labelledby="pdTitle">' +
+        '<h2 id="pdTitle"></h2>' +
+        '<p class="modal-note pd-note"></p>' +
+        '<div class="fn-row"><input class="fn-input" spellcheck="false" autocomplete="off"><span class="fn-ext"></span></div>' +
+        '<p class="pd-error" hidden></p>' +
+        '<div class="modal-actions">' +
+          '<button class="ghost-btn fn-cancel" type="button">বাতিল</button>' +
+          '<button class="primary-btn fn-ok" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span></span></button>' +
+        '</div>' +
+      '</form>';
+    document.body.appendChild(overlay);
+    return {
+      overlay,
+      form: overlay.querySelector("form"),
+      title: overlay.querySelector("h2"),
+      note: overlay.querySelector(".pd-note"),
+      input: overlay.querySelector(".fn-input"),
+      ext: overlay.querySelector(".fn-ext"),
+      error: overlay.querySelector(".pd-error"),
+      okIcon: overlay.querySelector(".fn-ok use"),
+      okLabel: overlay.querySelector(".fn-ok span"),
+      cancel: overlay.querySelector(".fn-cancel"),
+    };
+  }
+
+  // Resolves the typed value, or null if cancelled. `validate(value)` may return an error string
+  // (shown inline, dialog stays open) or a Promise of one -- used by the password prompt so a wrong
+  // password can be retried without the dialog closing and reopening.
+  function promptDialog(opts) {
+    if (!promptDialogEls) promptDialogEls = buildPromptDialog();
+    const d = promptDialogEls;
+    d.title.textContent = opts.title || "";
+    d.note.textContent = opts.note || "";
+    d.note.hidden = !opts.note;
+    d.input.type = opts.type || "text";
+    d.input.value = opts.value || "";
+    d.input.placeholder = opts.placeholder || "";
+    d.input.setAttribute("aria-label", opts.title || "");
+    d.ext.textContent = opts.suffix || "";
+    d.ext.hidden = !opts.suffix;
+    d.error.hidden = true;
+    d.okLabel.textContent = opts.okLabel || "ঠিক আছে";
+    d.okIcon.setAttribute("href", "#i-" + (opts.okIcon || "check"));
+    const previousFocus = document.activeElement;
+    d.overlay.hidden = false;
+    setTimeout(() => { d.input.focus(); d.input.select(); }, 0);
+
+    return new Promise((resolve) => {
+      let busy = false;
+      function finish(value) {
+        d.overlay.hidden = true;
+        d.form.removeEventListener("submit", onSubmit);
+        d.cancel.removeEventListener("click", onCancel);
+        d.overlay.removeEventListener("mousedown", onBackdrop);
+        document.removeEventListener("keydown", onKey, true);
+        if (previousFocus && document.contains(previousFocus) && previousFocus.focus) previousFocus.focus();
+        resolve(value);
+      }
+      async function onSubmit(e) {
+        e.preventDefault();
+        if (busy) return;
+        const value = d.input.value;
+        if (opts.validate) {
+          busy = true;
+          let err = null;
+          try { err = await opts.validate(value); } catch (ex) { err = ex.message || String(ex); }
+          busy = false;
+          if (err) {
+            d.error.textContent = err;
+            d.error.hidden = false;
+            d.input.focus(); d.input.select();
+            return;
+          }
+        }
+        finish(value);
+      }
+      function onCancel() { finish(null); }
+      function onBackdrop(e) { if (e.target === d.overlay) finish(null); }
+      function onKey(e) {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(null); }
+      }
+      d.form.addEventListener("submit", onSubmit);
+      d.cancel.addEventListener("click", onCancel);
+      d.overlay.addEventListener("mousedown", onBackdrop);
+      document.addEventListener("keydown", onKey, true);
+    });
+  }
+
+  // Asks for the download's file name (pre-filled, extension locked) and calls onSave(finalName).
+  // Resolves true (saved) / false (cancelled).
+  async function askFileName(defaultName, onSave) {
+    const { base, ext } = splitExt(defaultName);
+    const typed = await promptDialog({
+      title: "ফাইলের নাম দিন",
+      note: "যে নামে ডাউনলোড হবে সেটা লিখুন — এক্সটেনশন নিজে থেকেই যোগ হবে।",
+      value: base, suffix: ext, okLabel: "ডাউনলোড", okIcon: "download",
+    });
+    if (typed == null) return false;
+    onSave(cleanFileName(typed, defaultName));
+    return true;
+  }
+
+  function triggerDownload(href, filename) {
     const a = document.createElement("a");
-    a.href = url;
+    a.href = href;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
     bumpUsageCount();
+  }
+
+  // Standard browser download (Blob + a temporary <a download> link) -- this is a real,
+  // standalone site now, not running inside the Claude Artifact sandbox, so there's no
+  // window.claude "downloads" capability to lean on. This works in every modern browser.
+  // The user names the file first (askFileName above).
+  function saveFileToDisk(filename, data, mime) {
+    const blob = new Blob([data], { type: mime || "application/pdf" });
+    return askFileName(filename, (finalName) => {
+      const url = URL.createObjectURL(blob);
+      triggerDownload(url, finalName);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
   }
 
   // ---------------------------------------------------------------- usage milestone (soft, no backend)
@@ -393,25 +590,135 @@
     els.nidJoinModal.hidden = true;
     els.pageMgrModal.hidden = true;
     els.stampModal.hidden = true;
+    els.secureModal.hidden = true;
+    els.ocrModal.hidden = true;
+    els.pageNumModal.hidden = true;
   }
 
   // Generic "save any Blob/dataURL to disk" helper -- Merge/Compress already had saveFileToDisk()
   // for raw PDF bytes; the new image-producing tools need the same download mechanism for
   // image/* MIME types, so this wraps a data URL instead of a typed array.
   function downloadDataUrl(filename, dataUrl) {
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    bumpUsageCount();
+    return askFileName(filename, (finalName) => triggerDownload(dataUrl, finalName));
   }
+  // ---------------------------------------------------------------- lazy-loaded heavy libraries
+  // Only fetched the first time a feature needs them, so the normal page load stays light.
+  // @cantoo/pdf-lib is a maintained pdf-lib fork that can encrypt/decrypt; its ESM build is
+  // self-contained, so importing it never collides with the regular global PDFLib (v1.17.1).
+  const CRYPTO_PDFLIB_URL = "https://cdn.jsdelivr.net/npm/@cantoo/pdf-lib@2.11.1/dist/pdf-lib.esm.min.js";
+  let cryptoPdfLibPromise = null;
+  function loadCryptoPdfLib() {
+    if (!cryptoPdfLibPromise) {
+      cryptoPdfLibPromise = import(CRYPTO_PDFLIB_URL).catch((err) => {
+        cryptoPdfLibPromise = null;
+        throw new Error("পাসওয়ার্ড লাইব্রেরি লোড হয়নি — ইন্টারনেট সংযোগ দেখুন। (" + err.message + ")");
+      });
+    }
+    return cryptoPdfLibPromise;
+  }
+
+  // Removes the password from an encrypted PDF and returns plain bytes the rest of the app
+  // (pdf.js + regular pdf-lib) can work with. Throws a Bangla message on a wrong password.
+  async function decryptPdfBytes(bytes, password) {
+    const C = await loadCryptoPdfLib();
+    let doc;
+    try {
+      doc = await C.PDFDocument.load(bytes, { password });
+    } catch (err) {
+      if (/password/i.test(err.message || "")) throw new Error("পাসওয়ার্ড ভুল হয়েছে।");
+      throw err;
+    }
+    // Verified against the app's regular pdf-lib: the object-stream save comes out clean, while
+    // the classic-xref save still looks encrypted to pdf-lib 1.17 -- so try that order and keep
+    // the first output the rest of the app can actually open.
+    for (const opts of [{}, { useObjectStreams: false }]) {
+      const out = await doc.save(opts);
+      try { await PDFLib.PDFDocument.load(out); return out; } catch (err) { /* try next */ }
+    }
+    throw new Error("পাসওয়ার্ড সরানো গেলেও ফাইলটা খোলা যাচ্ছে না।");
+  }
+
+  const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+  let tesseractPromise = null;
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("লোড হয়নি: " + src));
+      document.head.appendChild(s);
+    });
+  }
+  // One shared OCR worker for the whole session (Bangla + English) -- creating it downloads
+  // ~15MB of language data the first time (then the browser caches it), so it's never recreated.
+  let ocrWorkerPromise = null;
+  function getOcrWorker(onProgress) {
+    if (!tesseractPromise) {
+      tesseractPromise = loadScriptOnce(TESSERACT_URL).catch((err) => { tesseractPromise = null; throw err; });
+    }
+    ocrProgressHandler = onProgress || null;
+    if (!ocrWorkerPromise) {
+      ocrWorkerPromise = tesseractPromise.then(() =>
+        window.Tesseract.createWorker("ben+eng", 1, {
+          logger: (m) => { if (ocrProgressHandler) ocrProgressHandler(m); },
+        })
+      ).catch((err) => {
+        ocrWorkerPromise = null;
+        throw new Error("OCR চালু করা যায়নি — ইন্টারনেট সংযোগ দেখুন। (" + err.message + ")");
+      });
+    }
+    return ocrWorkerPromise;
+  }
+  let ocrProgressHandler = null;
+  function setOcrProgressHandler(fn) { ocrProgressHandler = fn || null; }
+
+  // ---------------------------------------------------------------- tiny IndexedDB key-value store
+  // Used for autosave (the PDF bytes can be several MB -- far beyond localStorage's limit). Every
+  // call fails soft (resolves undefined / false) when IndexedDB is unavailable, e.g. private mode.
+  const IDB_NAME = "nothi", IDB_STORE = "kv";
+  let idbPromise = null;
+  function idbOpen() {
+    if (!idbPromise) {
+      idbPromise = new Promise((resolve, reject) => {
+        try {
+          const req = indexedDB.open(IDB_NAME, 1);
+          req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        } catch (err) { reject(err); }
+      });
+      idbPromise.catch(() => { idbPromise = null; });
+    }
+    return idbPromise;
+  }
+  function idbRun(mode, fn) {
+    return idbOpen().then((db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, mode);
+      const req = fn(tx.objectStore(IDB_STORE));
+      tx.oncomplete = () => resolve(req ? req.result : undefined);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    }));
+  }
+  function idbGet(key) { return idbRun("readonly", (st) => st.get(key)).catch(() => undefined); }
+  function idbSet(key, value) { return idbRun("readwrite", (st) => st.put(value, key)).then(() => true).catch(() => false); }
+  function idbDel(key) { return idbRun("readwrite", (st) => st.delete(key)).then(() => true).catch(() => false); }
+
+  // ---------------------------------------------------------------- offline support (PWA)
+  // Only over http(s) -- service workers can't register from file://, and that's fine.
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch((err) => console.warn("[Nothi] offline mode unavailable:", err));
+    });
+  }
+
   els.modalBackdrop.addEventListener("mousedown", (e) => {
     if (e.target === els.modalBackdrop) closeModals();
   });
 
 export {
   els, state, FONT_LIBRARY, BN_FONT_READY,
-  b64ToUint8Array, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals,
+  b64ToUint8Array, showToast, saveFileToDisk, downloadDataUrl, openModal, closeModals, fileBaseName,
+  promptDialog, loadCryptoPdfLib, decryptPdfBytes, getOcrWorker, setOcrProgressHandler,
+  idbGet, idbSet, idbDel,
 };
