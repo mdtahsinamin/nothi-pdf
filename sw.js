@@ -2,7 +2,7 @@
 // with the cache as fallback; versioned CDN libraries and OCR language data never change, so
 // they're cache-first. Nothing the user opens is ever cached here -- PDFs live only in the page.
 "use strict";
-const VERSION = "nothi-v3";
+const VERSION = "nothi-v4";
 const APP_SHELL = [
   "./",
   "index.html",
@@ -11,6 +11,7 @@ const APP_SHELL = [
   "assets/js/core.js",
   "assets/js/editor.js",
   "assets/js/pdf-text-remove.js",
+  "assets/js/rich-text.js",
   "assets/js/tools-pdf.js",
   "assets/js/tools-image.js",
   "assets/js/fonts-data.js",

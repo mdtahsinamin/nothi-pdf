@@ -7,6 +7,7 @@ import {
   promptDialog, decryptPdfBytes, getOcrWorker, setOcrProgressHandler, idbGet, idbSet, idbDel,
 } from "./core.js";
 import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from "./pdf-text-remove.js";
+import * as RT from "./rich-text.js";
 
   state.selection = new Set();
   state.shapeKind = "whiteout";
@@ -849,6 +850,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
   }
 
   function autoResizeTextarea(ta) {
+    if (ta.tagName !== "TEXTAREA") return; // the rich editor div sizes itself
     ta.style.height = "auto";
     ta.style.height = ta.scrollHeight + "px";
   }
@@ -1029,17 +1031,25 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
     resizeHandle.className = "tb-resize";
     resizeHandle.title = "টেনে চৌড়া বাড়ান/কমান";
 
-    // A real <textarea> (not contenteditable): IME/composition input -- how Bangla is typed
-    // (Avro and friends) -- is only reliable in native form controls.
-    const content = document.createElement("textarea");
+    // A contenteditable div (it used to be a <textarea>) so a word or line can carry its own
+    // size/weight/color -- see rich-text.js. The DOM is never rebuilt while typing, so IME
+    // composition (how Bangla is typed with Avro & co.) runs undisturbed.
+    const content = document.createElement("div");
     content.className = "tb-content";
-    content.rows = 1;
+    RT.makeEditable(content);
     content.spellcheck = false;
-    content.placeholder = box.unreliable ? "এই লেখাটা পড়া যায়নি — নতুন করে লিখুন" : "টাইপ করুন...";
+    content.setAttribute("role", "textbox");
+    content.setAttribute("aria-multiline", "true");
+    content.dataset.placeholder = box.unreliable ? "এই লেখাটা পড়া যায়নি — নতুন করে লিখুন" : "টাইপ করুন...";
     applyTextStyle(box, content);
-    content.value = box.text || "";
+    RT.renderInto(content, box, state.scale);
 
-    content.addEventListener("input", () => { box.text = content.value; autoResizeTextarea(content); commitSoon(); });
+    content.addEventListener("input", () => {
+      const r = RT.readFrom(content, box);
+      box.text = r.text;
+      box.styles = r.styles;
+      commitSoon();
+    });
     content.addEventListener("focus", () => { if (!state.selection.has(box.id) || state.selection.size > 1) setSelection([box.id]); });
     content.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
@@ -1051,6 +1061,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
       setTimeout(() => {
         const active = document.activeElement;
         if (active === content || els.floatingBar.contains(active)) return;
+        savedRanges.delete(box);
         if (!state.boxes.includes(box)) return;
         if (!box.text || !box.text.trim()) {
           discardIfEmpty(box);
@@ -1075,8 +1086,8 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
       state.pendingFocusId = null;
       requestAnimationFrame(() => {
         content.focus();
-        const end = content.value.length;
-        try { content.setSelectionRange(end, end); } catch (err) { /* fine */ }
+        const end = (box.text || "").length;
+        RT.setSelOffsets(content, end, end);
       });
     }
     return div;
@@ -1146,6 +1157,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
     els.floatingBar.classList.remove("fb-kind-text", "fb-kind-image", "fb-kind-shape");
     els.floatingBar.classList.add("fb-kind-" + kind);
     els.floatingBar.classList.toggle("fb-edited", !!box.cover);
+    if (kind !== "text") els.floatingBar.classList.remove("fb-range");
     els.floatingBar.classList.toggle("fb-strokable", kind === "shape" && ["rect", "ellipse", "line"].includes(box.shape));
     els.floatingBar.classList.toggle("fb-fillable", kind === "shape" && ["rect", "ellipse"].includes(box.shape));
     els.floatingBar.dataset.count = state.selection.size > 1 ? bnNum(state.selection.size) + "টি" : "";
@@ -1156,6 +1168,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
       els.fbFont.value = box.fontKey || "hind";
       els.fbAutoFont.classList.toggle("active", !!box.autoFont);
       els.fbLineHeight.value = String(nearestLineHeightOption(lineHeightOf(box)));
+      refreshRangeUI();
     } else if (kind === "shape") {
       els.fbColor.value = box.color || SHAPE_DEFAULT_COLOR[box.shape];
       els.fbStroke.value = String(box.strokeWidth || 2);
@@ -1232,6 +1245,9 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
   // ---------------------------------------------------------------- overlay pointer: create / draw / band-select
   els.floatingBar.addEventListener("pointerdown", (e) => {
     if (e.target === els.floatingBar) setSelection([]);
+    // buttons keep the focus (and the highlighted words) in the text box, so a style can be
+    // applied to exactly the selected part; inputs/selects still take focus normally
+    if (e.target.closest("button")) e.preventDefault();
   });
 
   els.overlay.addEventListener("pointerdown", (e) => {
@@ -1550,11 +1566,25 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
   function selectedBoxes(kind) {
     return state.boxes.filter((b) => state.selection.has(b.id) && (!kind || (b.type === kind)));
   }
+  function editorOf(box) {
+    const el = boxEl(box.id);
+    return el ? el.querySelector(".tb-content") : null;
+  }
   function refreshTextEl(box) {
     const el = boxEl(box.id);
     if (!el) return;
     const c = el.querySelector(".tb-content");
-    if (c) { applyTextStyle(box, c); autoResizeTextarea(c); }
+    if (c) {
+      applyTextStyle(box, c);
+      if (c.tagName !== "TEXTAREA") {
+        // re-render the styled spans, keeping the caret/selection where it was
+        const focused = document.activeElement === c;
+        const sel = focused ? RT.getSelOffsets(c) : null;
+        RT.renderInto(c, box, state.scale);
+        if (sel) RT.setSelOffsets(c, sel.s, sel.e);
+      }
+      autoResizeTextarea(c);
+    }
     placeBoxEl(box, el);
   }
   function updateTexts(fn) {
@@ -1564,18 +1594,100 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
     refreshSelectionUI();
     commitSoon();
   }
+
+  // ---- part of a box: select some words/lines inside a text box, and size/bold/color apply to
+  // just that part. The selection is remembered per box (clicking the size field or color picker
+  // moves focus away from the text, which would otherwise lose it).
+  const savedRanges = new WeakMap();
+  document.addEventListener("selectionchange", () => {
+    const sel = document.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const n = sel.anchorNode;
+    const host = n && (n.nodeType === 1 ? n : n.parentElement);
+    const ed = host && host.closest ? host.closest(".tb-content") : null;
+    // only selections the user makes while typing in the box count -- re-rendering the box
+    // while the size field has focus must not wipe the remembered range
+    if (!ed || document.activeElement !== ed) return;
+    const tb = ed.closest(".textbox");
+    const box = tb && state.boxes.find((b) => b.id === Number(tb.dataset.id));
+    if (!box) return;
+    const off = RT.getSelOffsets(ed);
+    savedRanges.set(box, off && off.e > off.s ? off : null);
+    if (box.id === state.selectedId) refreshRangeUI();
+  });
+  function activeRange() {
+    const box = currentBox();
+    if (!box || box.type !== "text" || state.selection.size !== 1) return null;
+    const r = savedRanges.get(box);
+    return r && r.e > r.s && r.e <= (box.text || "").length ? { box, s: r.s, e: r.e } : null;
+  }
+  function refreshRangeUI() {
+    const r = activeRange();
+    els.floatingBar.classList.toggle("fb-range", !!r);
+    if (!r) return;
+    const st = RT.effectiveAt(r.box, r.s);
+    els.fbFontSize.value = st.size;
+    els.fbBold.classList.toggle("active", RT.everyInRange(r.box, r.s, r.e, (x) => x.bold));
+    els.fbColor.value = st.color;
+  }
+  // refocus: true for buttons (keep the words highlighted), false for the size field and color
+  // picker (they keep focus; the remembered range stays in effect for further changes)
+  function applyToRange(r, fn, refocus) {
+    const { box, s, e } = r;
+    // close off any pending typing first, so the style change is its own undo step
+    if (history.timer) commit();
+    box.styles = RT.applyRange(box, s, e, fn);
+    const ed = editorOf(box);
+    if (ed) {
+      RT.renderInto(ed, box, state.scale);
+      if (refocus) { ed.focus(); RT.setSelOffsets(ed, s, e); }
+    }
+    savedRanges.set(box, { s, e });
+    const el = boxEl(box.id);
+    if (el) placeBoxEl(box, el);
+    refreshRangeUI();
+    positionFloatingBar(box);
+    // a button press is one step; dragging the color picker / typing a size is debounced
+    if (refocus) commit(); else commitSoon();
+  }
+  const clampSize = (v) => Math.max(4, Math.min(200, round1(v)));
+
   els.fbFontSize.addEventListener("input", () => {
     const v = parseFloat(els.fbFontSize.value);
     if (!(v >= 4 && v <= 200)) return;
-    updateTexts((b) => { b.fontSize = v; });
+    const r = activeRange();
+    if (r) { applyToRange(r, () => ({ size: v }), false); return; }
+    updateTexts((b) => {
+      const ratio = v / b.fontSize;
+      b.styles = RT.mapStyles(b, (st) => { if (st.size != null) st.size = clampSize(st.size * ratio); return st; });
+      b.fontSize = v;
+    });
   });
-  els.fbFontDown.addEventListener("click", () => updateTexts((b) => { b.fontSize = Math.max(4, round1(b.fontSize - 1)); }));
-  els.fbFontUp.addEventListener("click", () => updateTexts((b) => { b.fontSize = Math.min(200, round1(b.fontSize + 1)); }));
+  function stepSize(d) {
+    const r = activeRange();
+    if (r) { applyToRange(r, (eff) => ({ size: clampSize(eff.size + d) }), true); return; }
+    // whole box: words that were made bigger/smaller keep their difference
+    updateTexts((b) => {
+      b.styles = RT.mapStyles(b, (st) => { if (st.size != null) st.size = clampSize(st.size + d); return st; });
+      b.fontSize = clampSize(b.fontSize + d);
+    });
+  }
+  els.fbFontDown.addEventListener("click", () => stepSize(-1));
+  els.fbFontUp.addEventListener("click", () => stepSize(1));
   els.fbBold.addEventListener("click", () => {
+    const r = activeRange();
+    if (r) {
+      const allBold = RT.everyInRange(r.box, r.s, r.e, (x) => x.bold);
+      applyToRange(r, () => ({ bold: !allBold }), true);
+      return;
+    }
     const box = currentBox();
     const next = box && box.type === "text" ? !box.bold : !els.fbBold.classList.contains("active");
     els.fbBold.classList.toggle("active", next);
-    updateTexts((b) => { b.bold = next; });
+    updateTexts((b) => {
+      b.bold = next;
+      b.styles = RT.mapStyles(b, (st) => { delete st.bold; return st; });
+    });
   });
   els.fbColor.addEventListener("input", () => {
     const v = els.fbColor.value;
@@ -1585,8 +1697,13 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
       commitSoon();
       return;
     }
+    const r = activeRange();
+    if (r) { applyToRange(r, () => ({ color: v }), false); return; }
     lastTextColor = v;
-    updateTexts((b) => { b.color = v; });
+    updateTexts((b) => {
+      b.color = v;
+      b.styles = RT.mapStyles(b, (st) => { delete st.color; return st; });
+    });
   });
   els.fbFont.addEventListener("change", () => updateTexts((b) => { b.fontKey = els.fbFont.value; }));
   els.fbAutoFont.addEventListener("click", () => {
@@ -2082,7 +2199,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
   // Untouched edited items (clicked, then left alone) keep the original exactly as it was.
   function pristineSig(b) {
     return JSON.stringify([b.text, b.xPdf, b.yTopPdf, b.widthPdf, b.heightPdf, b.fontSize, b.bold, b.color,
-      b.fontKey, b.autoFont, b.lineHeight, b.imageDataUrl && b.imageDataUrl.length]);
+      b.fontKey, b.autoFont, b.lineHeight, b.imageDataUrl && b.imageDataUrl.length, b.styles || null]);
   }
   function isPristine(b) { return !!b.pristine && pristineSig(b) === b.pristine; }
 
@@ -2181,6 +2298,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
       const text = (data.text || "").split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n");
       if (!text) { showToast("এই অংশে কোনো লেখা পড়া যায়নি।", "warn"); return; }
       box.text = text;
+      box.styles = undefined;
       box.unreliable = undefined;
       renderBoxes();
       commit();
@@ -2628,6 +2746,14 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
       }
       // footprint of text drawn by an earlier export, from that box's own saved values
       function textFootprint(orig) {
+        if (orig.styles && orig.styles.length) {
+          const lines = layoutRich(orig);
+          const lh = orig.lineHeight || DEFAULT_LINE_HEIGHT;
+          const top = richContentTop(orig);
+          const height = lines.reduce((a, ln) => a + lh * ln.maxSize, 0);
+          const pad = 3;
+          return { x: orig.xPdf - pad, y: top - height - pad, w: orig.widthPdf + pad * 2, h: height + pad * 2 };
+        }
         const font = fontFor(orig);
         let count = 6;
         try {
@@ -2642,6 +2768,58 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
         return { x: orig.xPdf - pad, y: orig.yTopPdf - height + pad, w: orig.widthPdf + pad * 2, h: height };
       }
       function boxRect(b) { return { x: b.xPdf, y: b.yTopPdf - b.heightPdf, w: b.widthPdf, h: b.heightPdf }; }
+
+      // ---- boxes with per-word/line formatting
+      function runFont(box, eff) {
+        const fontDef = FONT_LIBRARY[box.fontKey] || FONT_LIBRARY.hind;
+        const fontSet = embeds[box.fontKey] || embeds.hind;
+        return { font: (eff.bold && fontDef.hasBold) ? fontSet.bold : fontSet.regular, faux: eff.bold && !fontDef.hasBold };
+      }
+      // pieces of one atom: with Auto Font, Bangla and Latin parts get their own fonts
+      function atomPieces(box, text, eff) {
+        const { font, faux } = runFont(box, eff);
+        if (!box.autoFont) return [{ text, font, faux }];
+        const en = eff.bold ? embeds.tinos.bold : embeds.tinos.regular;
+        return splitByScript(text).map((r) => ({ text: r.text, font: r.bengali ? font : en, faux: r.bengali && faux }));
+      }
+      function widthOf(font, text, size) {
+        try { return font.widthOfTextAtSize(text, size); } catch (err) { return text.length * size * 0.55; }
+      }
+      function layoutRich(box) {
+        return RT.layoutLines(box, box.widthPdf, (text, eff) =>
+          atomPieces(box, text, eff).reduce((a, pc) => a + widthOf(pc.font, pc.text, eff.size), 0));
+      }
+      // The editor anchors the first line of the box's own size at yTopPdf; a line's baseline
+      // sits K x (its biggest size) below the line top, K coming from the font's real metrics --
+      // the same arithmetic CSS uses for the on-screen box.
+      function richK(box) {
+        const m = fontMetrics(box.fontKey, box.bold);
+        return (lineHeightOf(box) - m.asc - m.desc) / 2 + m.asc;
+      }
+      function richContentTop(box) {
+        return box.yTopPdf - box.fontSize * BASELINE_RATIO + richK(box) * box.fontSize;
+      }
+      function drawRich(page, box) {
+        const lh = lineHeightOf(box);
+        const K = richK(box);
+        let lineTop = richContentTop(box);
+        for (const ln of layoutRich(box)) {
+          const baseline = lineTop - K * ln.maxSize;
+          let x = box.xPdf;
+          for (const atom of ln.atoms) {
+            const { r, g, b } = hexToRgb01(atom.eff.color);
+            const color = PDFLib.rgb(r, g, b);
+            for (const pc of atomPieces(box, atom.text, atom.eff)) {
+              if (pc.text.trim()) {
+                page.drawText(pc.text, { x, y: baseline, size: atom.eff.size, font: pc.font, color });
+                if (pc.faux) page.drawText(pc.text, { x: x + atom.eff.size * 0.035, y: baseline, size: atom.eff.size, font: pc.font, color });
+              }
+              x += widthOf(pc.font, pc.text, atom.eff.size);
+            }
+          }
+          lineTop -= lh * ln.maxSize;
+        }
+      }
 
       // ---- pass 1: collect, per page, every area whose old text must go
       // jobs: { rect, color, paint: "always" | "ifNeeded", needsCover }
@@ -2730,6 +2908,7 @@ import { removeTextInRects, removeImagesInRects, makeStandardWidthLookup } from 
         }
 
         if (!box.text || !box.text.trim()) continue;
+        if (box.styles && box.styles.length) { drawRich(page, box); continue; }
         const fontDef = FONT_LIBRARY[box.fontKey] || FONT_LIBRARY.hind;
         const faux = box.bold && !fontDef.hasBold;
         const font = fontFor(box);
