@@ -1725,7 +1725,24 @@ import * as RT from "./rich-text.js";
     els.fbAlignMenu.querySelectorAll("[data-align]").forEach((b) => b.classList.toggle("active", b.dataset.align === a));
   }
   function setAlign(a) {
-    updateTexts((b) => { if (a === "left") delete b.align; else b.align = a; });
+    let joined = 0;
+    updateTexts((b) => {
+      if (a === "left") delete b.align; else b.align = a;
+      // Lines taken from a PDF paragraph end in hard breaks, and justify never stretches a line
+      // that ends a paragraph -- so nothing would happen. Join them into one flowing paragraph
+      // at the original width first.
+      if (a === "justify" && b.softBreaks && /\n/.test(b.text || "")) {
+        const r = RT.joinSoftBreaks(b);
+        b.text = r.text;
+        b.styles = r.styles;
+        if (b.srcWidth) b.widthPdf = b.srcWidth + 0.5;
+        delete b.softBreaks;
+        joined++;
+        const el = boxEl(b.id);
+        if (el) el.style.width = b.widthPdf * state.scale + TEXT_INSET_X * 2 + "px";
+      }
+    });
+    if (joined) showToast("লাইনগুলো জোড়া দিয়ে একটা অনুচ্ছেদ বানানো হয়েছে, যাতে দুই পাশ সমান হয়।", "info", 3500);
     showAlign(a);
     commit();
   }
@@ -1918,6 +1935,11 @@ import * as RT from "./rich-text.js";
 
   // Lines -> paragraphs: consecutive lines with the same left edge, same font and size, and a
   // regular line gap become one block (line breaks kept), so a paragraph is edited as a whole.
+  function isWrappedLine(last, seg, bl) {
+    const w = last.x1 - last.x0;
+    const widest = Math.max(w, seg.x1 - seg.x0, bl.x1 - bl.x0);
+    return w >= last.size * 22 && w >= widest * 0.85;
+  }
   function segmentsToBlocks(segments, pageNum, prefix) {
     segments.sort((a, b) => b.baseline - a.baseline || a.x0 - b.x0);
     const blocks = [];
@@ -1929,7 +1951,11 @@ import * as RT from "./rich-text.js";
         const gap = last.baseline - seg.baseline;
         const ratio = seg.size / last.size;
         if (Math.abs(seg.x0 - bl.x0) < last.size * 0.6 && ratio > 0.92 && ratio < 1.08 &&
-            seg.fontId === last.fontId && gap > last.size * 0.95 && gap < last.size * 1.75 &&
+            seg.fontId === last.fontId && gap > last.size * 0.95 && gap < last.size * 2.4 &&
+            // Wide spacing (1.75-2.4x) is common in academic/government documents, but it's also
+            // what two separate short paragraphs look like ("Name: ..." above "Deadline: ...").
+            // Only a long, full-width line above means "the paragraph wrapped here".
+            (gap < last.size * 1.75 || isWrappedLine(last, seg, bl)) &&
             (bl.lines.length < 2 || Math.abs(gap - bl.spacing) < last.size * 0.2)) {
           target = bl; break;
         }
@@ -1947,12 +1973,17 @@ import * as RT from "./rich-text.js";
       // a block can only grow downward from its last line -- drop ones far above the current line
       for (let k = open.length - 1; k >= 0; k--) {
         const last = open[k].lines[open[k].lines.length - 1];
-        if (last.baseline - seg.baseline > last.size * 2.2) open.splice(k, 1);
+        if (last.baseline - seg.baseline > last.size * 2.8) open.splice(k, 1);
       }
     }
     return blocks.map((bl, i) => {
       const first = bl.lines[0];
       const text = bl.lines.map((l) => l.text).join("\n");
+      // Justified in the original: every line but the last runs to the same right edge (ragged
+      // text never lines up that well). Needs at least two full lines to be sure.
+      const full = bl.lines.slice(0, -1);
+      const tol = Math.max(1.2, (bl.x1 - bl.x0) * 0.012);
+      const justified = full.length >= 2 && full.every((l) => Math.abs(l.x1 - bl.x1) <= tol && Math.abs(l.x0 - bl.x0) <= tol);
       const name = (first.realName || "").replace(/^[A-Z]{6}\+/, "");
       const bengali = /[ঀ-৿]/.test(text);
       const latin = /[A-Za-z]/.test(text);
@@ -1968,6 +1999,8 @@ import * as RT from "./rich-text.js";
         serif: first.family === "serif" || (/times|roman|serif|georgia|garamond|cambria|book|minion/i.test(name) && !/sans/i.test(name)),
         unreliable: legacy,
         ocr: prefix === "o",
+        lineCount: bl.lines.length,
+        justified,
       };
     });
   }
@@ -2094,6 +2127,16 @@ import * as RT from "./rich-text.js";
     };
     if (bl.lineHeight) box.lineHeight = round1(bl.lineHeight * 100) / 100;
     if (box.autoFont && bl.serif) box.fontKey = "kalpurush";
+    if (bl.lineCount > 1 && !bl.unreliable) {
+      box.srcWidth = bl.x1 - bl.x0;
+      if (bl.justified) {
+        box.text = RT.joinSoftBreaks(box).text;
+        box.widthPdf = box.srcWidth + 0.5;
+        box.align = "justify";
+      } else {
+        box.softBreaks = true;
+      }
+    }
     box.pristine = pristineSig(box);
     state.boxes.push(box);
     state.pendingFocusId = box.id;

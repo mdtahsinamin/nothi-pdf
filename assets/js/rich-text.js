@@ -78,6 +78,29 @@ export function mapStyles(box, fn) {
   return compress(box, arr);
 }
 
+// Joins the soft line breaks of a paragraph that came from a PDF into flowing text (so it can
+// rewrap / justify). "word-\nnext" keeps the hyphen and drops the break; other single breaks
+// become spaces; a blank line (paragraph gap) is kept. Styles follow their characters.
+export function joinSoftBreaks(box) {
+  const text = box.text || "";
+  const arr = charStyles(box);
+  let out = "";
+  const outArr = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "\n" && text[i + 1] !== "\n" && text[i - 1] !== "\n" && i > 0 && i < text.length - 1) {
+      if (text[i - 1] === "-" || text[i - 1] === "\u2010") continue;
+      if (/\s/.test(text[i - 1]) || /\s/.test(text[i + 1])) continue;
+      out += " ";
+      outArr.push(arr[i - 1] || null);
+      continue;
+    }
+    out += ch;
+    outArr.push(arr[i]);
+  }
+  return { text: out, styles: compress({ ...box, text: out }, outArr) };
+}
+
 export function effectiveAt(box, i) {
   const arr = charStyles(box);
   return effective(box, arr[Math.max(0, Math.min(arr.length - 1, i))] || null);
