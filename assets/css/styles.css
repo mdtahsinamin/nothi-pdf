@@ -442,6 +442,12 @@ body.editing .stage-wrap { background: var(--stage-bg); }
 .fb-move { cursor: grab; touch-action: none; color: var(--accent); }
 .fb-move:active { cursor: grabbing; }
 .floating-bar:not(.fb-kind-text) .fb-only-text { display: none; }
+.fb-align-wrap { position: relative; display: flex; }
+.fb-align-menu {
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 2;
+  display: flex; gap: 2px; padding: 4px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow-lg);
+}
 .fb-scope {
   display: none; align-items: center; gap: 4px; height: 26px; padding: 0 8px; margin: 0 2px;
   border-radius: 7px; font-size: 11.5px; font-weight: 700; white-space: nowrap;

@@ -1025,7 +1025,9 @@ import * as RT from "./rich-text.js";
     }
 
     // ---- text box
-    div.style.width = box.widthPdf * state.scale + "px";
+    // The text area itself is exactly widthPdf wide at any zoom (the box adds its border and
+    // padding around it), so lines wrap and align on screen exactly where the export puts them.
+    div.style.width = box.widthPdf * state.scale + TEXT_INSET_X * 2 + "px";
     if (box.cover) div.classList.add("edited");
     const resizeHandle = document.createElement("div");
     resizeHandle.className = "tb-resize";
@@ -1099,6 +1101,7 @@ import * as RT from "./rich-text.js";
     content.style.color = box.color;
     content.style.fontFamily = (FONT_LIBRARY[box.fontKey] || FONT_LIBRARY.hind).cssFamily;
     content.style.lineHeight = String(lineHeightOf(box));
+    content.style.textAlign = box.align || "left";
   }
 
   function styleShapeInner(box, inner) {
@@ -1168,6 +1171,7 @@ import * as RT from "./rich-text.js";
       els.fbFont.value = box.fontKey || "hind";
       els.fbAutoFont.classList.toggle("active", !!box.autoFont);
       els.fbLineHeight.value = String(nearestLineHeightOption(lineHeightOf(box)));
+      showAlign(box.align || "left");
       refreshRangeUI();
     } else if (kind === "shape") {
       els.fbColor.value = box.color || SHAPE_DEFAULT_COLOR[box.shape];
@@ -1381,6 +1385,7 @@ import * as RT from "./rich-text.js";
     try { el.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
     const startX = e.clientX, startY = e.clientY;
     const startW = box.widthPdf * state.scale;
+    const extra = box.type === "text" ? TEXT_INSET_X * 2 : 0;
     const startH = (box.heightPdf || 0) * state.scale;
     const aspect = box.heightPdf && box.widthPdf ? box.heightPdf / box.widthPdf : 1;
     const content = el.querySelector(".tb-content");
@@ -1389,7 +1394,7 @@ import * as RT from "./rich-text.js";
     function onMove(ev) {
       const w = Math.max(minW, startW + (ev.clientX - startX));
       box.widthPdf = w / state.scale;
-      el.style.width = w + "px";
+      el.style.width = w + extra + "px";
       if (axis === "aspect") {
         box.heightPdf = box.widthPdf * aspect;
         el.style.height = box.heightPdf * state.scale + "px";
@@ -1712,6 +1717,29 @@ import * as RT from "./rich-text.js";
     els.fbAutoFont.classList.toggle("active", next);
     updateTexts((b) => { b.autoFont = next; });
   });
+  // ---- alignment (whole box): left / center / right / justify
+  const ALIGN_LABELS = { left: "বামে", center: "মাঝে", right: "ডানে", justify: "দুই পাশ সমান (Justify)" };
+  function showAlign(a) {
+    document.getElementById("fbAlignIcon").setAttribute("href", "#i-align-" + a);
+    els.fbAlign.title = "লেখা সাজানো: " + ALIGN_LABELS[a];
+    els.fbAlignMenu.querySelectorAll("[data-align]").forEach((b) => b.classList.toggle("active", b.dataset.align === a));
+  }
+  function setAlign(a) {
+    updateTexts((b) => { if (a === "left") delete b.align; else b.align = a; });
+    showAlign(a);
+    commit();
+  }
+  els.fbAlign.addEventListener("click", () => { els.fbAlignMenu.hidden = !els.fbAlignMenu.hidden; });
+  els.fbAlignMenu.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-align]");
+    if (!btn) return;
+    setAlign(btn.dataset.align);
+    els.fbAlignMenu.hidden = true;
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!els.fbAlignMenu.hidden && !els.fbAlignMenu.contains(e.target) && !els.fbAlign.contains(e.target)) els.fbAlignMenu.hidden = true;
+  });
+
   els.fbLineHeight.addEventListener("change", () => updateTexts((b) => { b.lineHeight = parseFloat(els.fbLineHeight.value) || DEFAULT_LINE_HEIGHT; }));
   els.fbStroke.addEventListener("change", () => {
     selectedBoxes("shape").forEach((b) => { b.strokeWidth = parseFloat(els.fbStroke.value) || 2; const el = boxEl(b.id); if (el) styleShapeInner(b, el.querySelector(".shape-content")); });
@@ -2199,7 +2227,7 @@ import * as RT from "./rich-text.js";
   // Untouched edited items (clicked, then left alone) keep the original exactly as it was.
   function pristineSig(b) {
     return JSON.stringify([b.text, b.xPdf, b.yTopPdf, b.widthPdf, b.heightPdf, b.fontSize, b.bold, b.color,
-      b.fontKey, b.autoFont, b.lineHeight, b.imageDataUrl && b.imageDataUrl.length, b.styles || null]);
+      b.fontKey, b.autoFont, b.lineHeight, b.imageDataUrl && b.imageDataUrl.length, b.styles || null, b.align || null]);
   }
   function isPristine(b) { return !!b.pristine && pristineSig(b) === b.pristine; }
 
@@ -2566,6 +2594,11 @@ import * as RT from "./rich-text.js";
     // inside a text box, the browser's own text undo is what people expect
     if (typing) {
       if (e.key === "Escape") { e.target.blur(); setSelection([]); }
+      const ALIGN_KEYS = { l: "left", e: "center", r: "right", j: "justify" };
+      if (mod && e.shiftKey && ALIGN_KEYS[k] && e.target.classList.contains("tb-content")) {
+        e.preventDefault();
+        setAlign(ALIGN_KEYS[k]);
+      }
       return;
     }
     if (mod && k === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
@@ -2805,8 +2838,20 @@ import * as RT from "./rich-text.js";
         let lineTop = richContentTop(box);
         for (const ln of layoutRich(box)) {
           const baseline = lineTop - K * ln.maxSize;
+          const align = box.align || "left";
+          const slack = Math.max(0, box.widthPdf - ln.width);
           let x = box.xPdf;
-          for (const atom of ln.atoms) {
+          if (align === "center") x += slack / 2;
+          else if (align === "right") x += slack;
+          // justify: spread the spare room over the gaps between words (not the paragraph's last
+          // line, and not leading spaces) -- what CSS text-align: justify does on screen
+          let perGap = 0;
+          const firstWord = ln.atoms.findIndex((a) => !a.space);
+          if (align === "justify" && !ln.paraEnd && firstWord >= 0) {
+            const gaps = ln.atoms.filter((a, i) => a.space && i > firstWord).length;
+            if (gaps) perGap = slack / gaps;
+          }
+          for (const [ai, atom] of ln.atoms.entries()) {
             const { r, g, b } = hexToRgb01(atom.eff.color);
             const color = PDFLib.rgb(r, g, b);
             for (const pc of atomPieces(box, atom.text, atom.eff)) {
@@ -2816,6 +2861,7 @@ import * as RT from "./rich-text.js";
               }
               x += widthOf(pc.font, pc.text, atom.eff.size);
             }
+            if (perGap && atom.space && ai > firstWord) x += perGap;
           }
           lineTop -= lh * ln.maxSize;
         }
@@ -2908,7 +2954,7 @@ import * as RT from "./rich-text.js";
         }
 
         if (!box.text || !box.text.trim()) continue;
-        if (box.styles && box.styles.length) { drawRich(page, box); continue; }
+        if ((box.styles && box.styles.length) || (box.align && box.align !== "left")) { drawRich(page, box); continue; }
         const fontDef = FONT_LIBRARY[box.fontKey] || FONT_LIBRARY.hind;
         const faux = box.bold && !fontDef.hasBold;
         const font = fontFor(box);

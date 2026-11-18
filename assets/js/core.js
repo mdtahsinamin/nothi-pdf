@@ -224,6 +224,8 @@
     fbStroke: document.getElementById("fbStroke"),
     fbFill: document.getElementById("fbFill"),
     fbLineHeight: document.getElementById("fbLineHeight"),
+    fbAlign: document.getElementById("fbAlign"),
+    fbAlignMenu: document.getElementById("fbAlignMenu"),
     btnPageNumbers: document.getElementById("btnPageNumbers"),
     pageNumModal: document.getElementById("pageNumModal"),
     pnFormat: document.getElementById("pnFormat"),

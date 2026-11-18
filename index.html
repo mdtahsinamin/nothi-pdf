@@ -65,6 +65,10 @@
 <symbol id="i-offline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.7M19 12.9a10 10 0 0 0-2.3-1.6M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11.1 5M2 2l20 20"/></symbol>
 <symbol id="i-form" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h3M8 16h3"/><rect x="13" y="11" width="3" height="2"/><rect x="13" y="15" width="3" height="2"/></symbol>
 <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-align-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></symbol>
+<symbol id="i-align-center" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></symbol>
+<symbol id="i-align-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></symbol>
+<symbol id="i-align-justify" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></symbol>
 <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
 </defs></svg>
 
@@ -367,6 +371,15 @@
             </select>
             <button class="fb-btn fb-only-text" id="fbAutoFont" type="button" title="Auto Font: বাংলা+English আলাদা ফন্টে বসবে (এক্সপোর্টে)">Aa</button>
             <button class="fb-btn fb-only-text" id="fbBold" type="button" title="বোল্ড">B</button>
+            <div class="fb-align-wrap fb-only-text">
+              <button class="fb-btn" id="fbAlign" type="button" title="লেখা সাজানো" aria-haspopup="true"><svg class="ic" aria-hidden="true"><use id="fbAlignIcon" href="#i-align-left"/></svg></button>
+              <div class="fb-align-menu" id="fbAlignMenu" hidden role="menu">
+                <button type="button" class="fb-btn" data-align="left" title="বামে (Ctrl+Shift+L)"><svg class="ic" aria-hidden="true"><use href="#i-align-left"/></svg></button>
+                <button type="button" class="fb-btn" data-align="center" title="মাঝে (Ctrl+Shift+E)"><svg class="ic" aria-hidden="true"><use href="#i-align-center"/></svg></button>
+                <button type="button" class="fb-btn" data-align="right" title="ডানে (Ctrl+Shift+R)"><svg class="ic" aria-hidden="true"><use href="#i-align-right"/></svg></button>
+                <button type="button" class="fb-btn" data-align="justify" title="দুই পাশ সমান — Justify (Ctrl+Shift+J)"><svg class="ic" aria-hidden="true"><use href="#i-align-justify"/></svg></button>
+              </div>
+            </div>
             <label class="fb-select-ic fb-only-text" title="লাইনের মাঝের ফাঁক"><svg class="ic" aria-hidden="true"><use href="#i-line-height"/></svg>
               <select id="fbLineHeight" aria-label="লাইনের ফাঁক">
                 <option value="1">1.0</option><option value="1.15">1.15</option><option value="1.25">1.25</option>

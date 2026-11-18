@@ -267,7 +267,7 @@ export function layoutLines(box, maxWidth, measure) {
         if (!t) return;
         const space = /^\s+$/.test(t);
         const last = tokens[tokens.length - 1];
-        const atom = { text: t, eff: run.eff, w: measure(t, run.eff) };
+        const atom = { text: t, eff: run.eff, w: measure(t, run.eff), space };
         if (last && last.space === space) last.atoms.push(atom);
         else tokens.push({ space, atoms: [atom] });
       });
@@ -287,6 +287,7 @@ export function layoutLines(box, maxWidth, measure) {
       }
       pending = [];
     }
+    cur.paraEnd = true; // last line of a paragraph: never stretched by "justify"
     lines.push(cur);
   }
   lines.forEach((ln) => {
